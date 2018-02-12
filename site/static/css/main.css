@@ -5,3 +5,11 @@ body {
   padding: 40px 15px;
   text-align: center;
 }
+
+
+h1.lr-logo {
+    text-align: center;
+    font-style: normal;
+    font-weight: bold;
+    color: #4e76ea;
+}

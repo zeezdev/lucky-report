@@ -2,6 +2,9 @@ from flask import Flask
 from flask.sessions import SessionInterface
 from beaker.middleware import SessionMiddleware
 from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from flask_sqlalchemy_session import flask_scoped_session
 
 
 session_opts = {
@@ -60,6 +63,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # import & register blueprints
 from pages.views import pages_app
 app.register_blueprint(pages_app)
+
+# engine = create_engine("postgresql://luckyreportuser:luckyreportuser@localhost/luckyreport")
+# session_factory = sessionmaker(bind=engine)
+# session = flask_scoped_session(session_factory, app)
 
 
 if __name__ == "__main__":

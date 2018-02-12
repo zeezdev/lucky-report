@@ -107,10 +107,10 @@ class IndexApp extends React.Component {
         render() {
             return (
                 <div>
-                  <h3>Please enter your request</h3>
+                  <h1 className="lr-logo">Lucky Report</h1>
                   <div className="row">
                     <div className="col-lg-12">
-                        <div className="form-group">
+                        <div className="input-group" style={{margin: "16px 0px"}}>
                             <input
                                 type={"text"}
                                 style={{width:"100%"}}
@@ -118,8 +118,11 @@ class IndexApp extends React.Component {
                                 value={this.state.findWordValue}
                                 onChange={this.handleQueryOnChange.bind(this)}
                                 onKeyPress={this.handleQueryOnKeyPress.bind(this)}
-                                placeholder={"I'm feeling lucky!"}
+                                placeholder={"Please enter your request"}
                                 />
+                            <span class="input-group-btn">
+                                <button class="btn btn-success" type="button">I'm feeling lucky!</button>
+                            </span>
                         </div>
                     </div>
                     <div className="col-lg-12">

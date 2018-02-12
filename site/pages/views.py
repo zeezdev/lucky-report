@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, request, session, jsonify
+# from flask_sqlalchemy_session import current_session
 
 pages_app = Blueprint('pages_app', __name__)
-from models import Request
+from models import Request, Result, ReportTypeEnum
+from app import db
 
 
 @pages_app.route('/')
@@ -59,9 +61,8 @@ def api_request():
     # TODO: Search work
     # create request_id in DB
     try:
-        from app import db
-        # session_key = request.cookies.get('beaker.session.id')
-        session_key = request.cookies.get('sessionid')
+        session_key = request.cookies.get('beaker.session.id')
+        # session_key = request.cookies.get('sessionid')
 
         request_obj = Request(
             request=request_text,
@@ -75,18 +76,48 @@ def api_request():
         print(ex)
 
     # associate all found results with this request_id
+    results = []
+    results.append(Result(request_obj.id,
+                     "SELECT server_id, name, server_type FROM servers WHERE name LIKE 'a*'",
+                     1.000, ReportTypeEnum.table))
+    results.append(Result(request_obj.id,
+                     "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type",
+                     0.900, ReportTypeEnum.chart))
+    results.append(Result(request_obj.id,
+                     "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type ORDER BY s.server_name",
+                     0.540, ReportTypeEnum.graph))
+    for r in results:
+        db.session.add(r)
+    db.session.commit()
+
 
     return jsonify(result)
 
 
 @pages_app.route('/api/results')
 def api_results():
-    request_id = request.values.get('request_id')
-
     result = {
-        'ok': 1,
-        'request_id': request_id,
-        'results': [1,2,3]
+        'ok': 0,
+        'request_id': None,
+        # 'results': [1,2,3]
     }
+    request_id = request.values.get('request_id')
+    try:
+        request_id = int(request_id)
+        # request_obj = current_session.query(Request).filter_by(id=request_id).first()
+        request_obj = db.session.query(Request).filter_by(id=request_id).first()
+
+        results = [r.id for r in request_obj.result]
+        result.update({
+            'request_id': request_id,
+            'results': results,
+            'ok': 1
+        })
+    except (ValueError, TypeError):
+        result['error'] = 'request_id bad value'
+    except Exception as ex:
+        result['error'] = 'unknown error'
+        print("Error: %s" % str(ex))
+
     return jsonify(result)
 

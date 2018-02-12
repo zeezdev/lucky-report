@@ -5,5 +5,4 @@
 site/.venv/
 site/node_modules/
 site/static/bundles/
-
-
+site/webpack-stats.json
