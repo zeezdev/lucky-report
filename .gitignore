@@ -1,0 +1,9 @@
+.venv/
+.idea/
+*.log
+*.pyc
+site/.venv/
+site/node_modules/
+site/static/bundles/
+
+

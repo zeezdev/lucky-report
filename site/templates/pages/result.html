@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Result{% endblock %}
+
+{% block content %}
+  <input type="hidden" id="result-id" data-id="{{ result_id }}"/>
+  <div id="result"></div>
+{% endblock %}
+
+
+{% block extrajs %}
+  <script src="{{ url_for('static', filename='bundles/result.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+  <div id="index-id"></div>
+  <input type="hidden" id="request-id" data-request-id="{{ request_id }}">
+{% endblock %}
+
+
+{% block extrajs %}
+  <script src="{{ url_for('static', filename='bundles/index.js') }}"></script>
+{% endblock %}

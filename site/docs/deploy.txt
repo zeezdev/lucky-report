@@ -1,0 +1,16 @@
+Create PostgreSQL DB:
+# psql
+# CREATE DATABASE luckyreport;
+# CREATE USER luckyreportuser;
+# GRANT ALL PRIVILEGES ON DATABASE luckyreport to luckyreportuser;
+# \password luckyreportuser;
+
+
+DB migrations:
+# python manage.py db init
+# python manage.py db migrate
+# python manage.py db upgrade
+
+https://realpython.com/blog/python/flask-by-example-part-3-text-processing-with-requests-beautifulsoup-nltk/
+http://flask.pocoo.org/snippets/121/
+http://docs.sqlalchemy.org/en/rel_1_0/core/defaults.html#server-side-defaults
