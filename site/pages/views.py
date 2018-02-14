@@ -130,3 +130,17 @@ def api_results():
 
     return js
 
+
+@pages_app.route('/api/results/<result_id>')
+def api_result_detail(result_id):
+    result = {
+        'ok': 0
+    }
+    try:
+        result_obj = db.session.query(Result).filter_by(id=int(result_id)).first()
+        result['result'] = result_obj.to_dict()
+    except Exception as ex:
+        print("Error: %s" % str(ex))
+        return jsonify({'ok': 0, 'error': "server error"})
+
+    return jsonify(result)
