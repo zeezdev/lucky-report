@@ -1,11 +1,25 @@
 import React from 'react';
 var sendAjaxRequest = require('../ajax').sendAjaxRequest;
 
+
+var deserializeResult = function(json) {
+    return {
+        id: json.id,
+        requestId: json.request_id,
+        query: json.query,
+        rate: json.rate,
+        reportType: json.report_type
+    }
+}
+
+
+
 /**
 * props:
-*   key:
-*   resultId:
-*   displayResult:
+*   key <int>: key
+*   resultId <int>: ???
+*   displayResult <str>: ???
+*   reportType <int>: ???
 */
 class ResultItem extends React.Component {
     constructor(props) {
@@ -43,8 +57,9 @@ class ResultsList extends React.Component {
                     this.props.results.map((obj, index) => {
                         return <ResultItem
                             key={index}
-                            resultId={index}
-                            displayResult={"SELECT * FROM table_name"}
+                            resultId={obj.id}
+                            displayResult={obj.query}
+                            reportType={obj.reportType}
                         />
                     })
                 }
@@ -64,6 +79,7 @@ class IndexApp extends React.Component {
                 queryValue: "",
                 results: []
             }
+            this.sendRequest.bind(this);
         }
 
         componentDidMount() {
@@ -72,7 +88,11 @@ class IndexApp extends React.Component {
                 sendAjaxRequest('GET', '/api/results', {'request_id': this.props.requestId},
                     function(response, textStatus, jsXHR) {
                         if ('ok' in response && parseInt(response.ok) === 1) {
-                            self.setState({results: response.results});
+                            let results = [];
+                            for (let result of response.results) {
+                                results.push(deserializeResult(result));
+                            }
+                            self.setState({results: results});
                         }
                     }                    
                 );
@@ -87,21 +107,28 @@ class IndexApp extends React.Component {
             this.setState({queryValue: e.target.value});
         }
 
+        sendRequest(request) {
+            this.resetFound();
+            sendAjaxRequest('GET', '/api/request', {'request': request},
+                function(response, textStatus, jsXHR) {
+                    if ('ok' in response && parseInt(response.ok) === 1) {
+                        if ('request_id' in response) {
+                            var requestId = parseInt(response.request_id);
+                            window.location.assign('/?request_id=' + requestId);
+                        }
+                    }
+                }
+            );
+        }
+
         handleQueryOnKeyPress(e) {
             if (e.charCode == 13) { // ENTER
-                this.resetFound();
-                sendAjaxRequest('GET', '/api/request', {'request': this.state.queryValue},
-                    function(response, textStatus, jsXHR) {
-                        if ('ok' in response && parseInt(response.ok) === 1) {
-                            if ('request_id' in response) {
-                                var requestId = parseInt(response.request_id);
-                                window.location.assign('/?request_id=' + requestId);
-                            }
-                        }
-                    }                    
-                );
-                // alert(this.state.queryValue);
+                this.sendRequest(this.state.queryValue);
             }
+        }
+
+        handleQueryOnClick(e) {
+            this.sendRequest(this.state.queryValue);
         }
 
         render() {
@@ -120,8 +147,12 @@ class IndexApp extends React.Component {
                                 onKeyPress={this.handleQueryOnKeyPress.bind(this)}
                                 placeholder={"Please enter your request"}
                                 />
-                            <span class="input-group-btn">
-                                <button class="btn btn-success" type="button">I'm feeling lucky!</button>
+                            <span className="input-group-btn">
+                                <button
+                                    className="btn btn-success"
+                                    type="button"
+                                    onClick={this.handleQueryOnClick.bind(this)}
+                                >I'm feeling lucky!</button>
                             </span>
                         </div>
                     </div>

@@ -23,11 +23,23 @@ class Request(db.Model):
     def __str__(self):
         return '<Request id=%s>' % self.id
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'request': self.request
+        }
+
 
 class ReportTypeEnum(enum.Enum):
     table = 1
     graph = 2
     chart = 3
+
+ReportTypeEnum2int = {
+    ReportTypeEnum.table: 1,
+    ReportTypeEnum.graph: 2,
+    ReportTypeEnum.chart: 3
+}
 
 
 class Result(db.Model):
@@ -51,3 +63,12 @@ class Result(db.Model):
 
     def __str__(self):
         return '<Request id=%s>' % self.id
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'request_id': self.request_id,
+            'query': self.query,
+            'rate': self.rate,
+            'report_type': ReportTypeEnum2int[self.report_type]
+        }

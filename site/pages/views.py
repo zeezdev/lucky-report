@@ -107,17 +107,26 @@ def api_results():
         # request_obj = current_session.query(Request).filter_by(id=request_id).first()
         request_obj = db.session.query(Request).filter_by(id=request_id).first()
 
-        results = [r.id for r in request_obj.result]
+        results = [r.to_dict() for r in request_obj.result]
         result.update({
             'request_id': request_id,
             'results': results,
             'ok': 1
         })
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as ex:
+        print("Type error: %s" % str(ex))
         result['error'] = 'request_id bad value'
     except Exception as ex:
         result['error'] = 'unknown error'
         print("Error: %s" % str(ex))
 
-    return jsonify(result)
+    try:
+        js = jsonify(result)
+    except Exception as ex:
+        print(ex)
+        result['ok'] = 0
+        result['error'] = 'server error'
+        return result
+
+    return js
 
