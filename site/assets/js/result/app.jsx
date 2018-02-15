@@ -1,11 +1,15 @@
 import React from 'react';
-//var sendAjaxRequest = require('../ajax').sendAjaxRequest;
+var sendAjaxRequest = require('../ajax').sendAjaxRequest;
 
 
 class ResultApp extends React.Component {
     render() {
         return (
-            <div>OK</div>
+            <div>
+                <h2>Report Result</h2>
+                <div>
+                </div>
+            </div>
         )
     }
 

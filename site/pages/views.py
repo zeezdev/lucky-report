@@ -4,6 +4,18 @@ from flask import Blueprint, render_template, request, session, jsonify
 pages_app = Blueprint('pages_app', __name__)
 from models import Request, Result, ReportTypeEnum
 from app import db
+from ln2sql import Ln2sql
+
+
+def translate(request):
+    ln2sql = Ln2sql(
+        database_path="/home/user/Documents/dd.sql",
+        language_path="/home/user/work/ln2sql3/ln2sql/lang_store/english.csv",
+        # json_output_path=args.json_output,
+        # thesaurus_path=args.thesaurus,
+        # stopwords_path=args.stopwords,
+    ).get_query("What servers name exists?")
+    return ln2sql
 
 
 @pages_app.route('/')
@@ -58,7 +70,6 @@ def api_request():
         'request_id': -1
     }
 
-    # TODO: Search work
     # create request_id in DB
     try:
         session_key = request.cookies.get('beaker.session.id')
@@ -77,15 +88,33 @@ def api_request():
 
     # associate all found results with this request_id
     results = []
-    results.append(Result(request_obj.id,
-                     "SELECT server_id, name, server_type FROM servers WHERE name LIKE 'a*'",
-                     1.000, ReportTypeEnum.table))
-    results.append(Result(request_obj.id,
-                     "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type",
-                     0.900, ReportTypeEnum.chart))
-    results.append(Result(request_obj.id,
-                     "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type ORDER BY s.server_name",
-                     0.540, ReportTypeEnum.graph))
+    t = []
+    try:
+        t = translate("")
+    except:
+        pass
+
+    # for r in t:
+    if isinstance(t, str):
+        results.append(Result(request_obj.id,
+                              t,
+                              1.000, ReportTypeEnum.table))
+    else:
+        for r in t:
+            results.append(Result(request_obj.id,
+                                  r,
+                                  1.000, ReportTypeEnum.table))
+
+
+    # results.append(Result(request_obj.id,
+    #                  "SELECT server_id, name, server_type FROM servers WHERE name LIKE 'a*'",
+    #                  1.000, ReportTypeEnum.table))
+    # results.append(Result(request_obj.id,
+    #                  "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type",
+    #                  0.900, ReportTypeEnum.chart))
+    # results.append(Result(request_obj.id,
+    #                  "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type ORDER BY s.server_name",
+    #                  0.540, ReportTypeEnum.graph))
     for r in results:
         db.session.add(r)
     db.session.commit()
