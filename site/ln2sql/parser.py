@@ -8,6 +8,10 @@ from threading import Thread
 from .parsingException import ParsingException
 from .query import *
 
+# TODO: move to config
+MIN_WORD_SIMILARITY = 0.4
+MIN_COLUMN_NAME_SIMILARITY = 0.3
+MAX_JOIN_DEPTH = 4
 
 class SelectParser(Thread):
     def __init__(self, columns_of_select, tables_of_from, phrase, count_keywords, sum_keywords, average_keywords,
@@ -175,6 +179,8 @@ class FromParser(Thread):
         return links
 
     def is_join(self, historic, table_src, table_trg):
+        if len(historic) > MAX_JOIN_DEPTH:
+            return []
         historic = historic
         links = self.get_all_direct_linked_tables_of_a_table(table_src)
 
@@ -231,27 +237,23 @@ class FromParser(Thread):
             for column in self.columns_of_select:
                 if column not in self.database_dico[table_of_from]:
                     foreign_table = self.get_tables_of_column(column)[0]
-                    join_object.add_table(foreign_table)
                     link = self.get_link(table_of_from, foreign_table)
 
                     if not link:
-                        self.queries = ParsingException(
-                            "There is at least column `" + column + "` that is unreachable from table `" + table_of_from.upper() + "`!")
-                        return
+                        query.set_corrupted(True)
                     else:
+                        join_object.add_table(foreign_table)
                         links.extend(link)
 
             for column in self.columns_of_where:
                 if column not in self.database_dico[table_of_from]:
                     foreign_table = self.get_tables_of_column(column)[0]
-                    join_object.add_table(foreign_table)
                     link = self.get_link(table_of_from, foreign_table)
 
                     if not link:
-                        self.queries = ParsingException(
-                            "There is at least column `" + column + "` that is unreachable from table `" + table_of_from.upper() + "`!")
-                        return
+                        query.set_corrupted(True)
                     else:
+                        join_object.add_table(foreign_table)
                         links.extend(link)
 
             join_object.set_links(self.unique_ordered(links))
@@ -264,7 +266,7 @@ class FromParser(Thread):
 
 
 class WhereParser(Thread):
-    def __init__(self, phrases, tables_of_from, columns_of_values_of_where, count_keywords, sum_keywords,
+    def __init__(self, phrases, tables_of_from, columns_of_where, columns_of_values_of_where, count_keywords, sum_keywords,
                  average_keywords, max_keywords, min_keywords, greater_keywords, less_keywords, between_keywords,
                  negation_keywords, junction_keywords, disjunction_keywords, like_keywords, distinct_keywords,
                  database_dico, database_object):
@@ -272,6 +274,7 @@ class WhereParser(Thread):
         self.where_objects = []
         self.phrases = phrases
         self.tables_of_from = tables_of_from
+        self.column_of_where = columns_of_where
         self.columns_of_values_of_where = columns_of_values_of_where
         self.count_keywords = count_keywords
         self.sum_keywords = sum_keywords
@@ -378,8 +381,7 @@ class WhereParser(Thread):
         return already
 
     def run(self):
-        number_of_where_columns = 0
-        columns_of_where = []
+        columns_of_where = self.column_of_where
         offset_of = {}
         column_offset = []
         self.count_keyword_offset = []
@@ -398,18 +400,12 @@ class WhereParser(Thread):
         for phrase in self.phrases:
             phrase_offset_string = ''
             for i in range(0, len(phrase)):
-                for table_name in self.database_dico:
-                    columns = self.database_object.get_table_by_name(table_name).get_columns()
-                    for column in columns:
-                        if (phrase[i] == column.name) or (phrase[i] in column.equivalences):
-                            number_of_where_columns += 1
-                            columns_of_where.append(column.name)
-                            offset_of[phrase[i]] = i
-                            column_offset.append(i)
-                            break
-                    else:
-                        continue
-                    break
+                if self.database_object.get_max_word_similarity(phrase[i], ' '.join(
+                        columns_of_where)) >= MIN_COLUMN_NAME_SIMILARITY:
+                    offset_of[phrase[i]] = i
+                    column_offset.append(i)
+                else:
+                    continue
 
                 phrase_keyword = str(phrase[i]).lower()  # for robust keyword matching
                 phrase_offset_string += phrase_keyword + " "
@@ -673,6 +669,13 @@ class Parser:
         nkfd_form = unicodedata.normalize('NFKD', str(string))
         return "".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
+    def adjust_stopwords(self, stopwords):
+        if stopwords is not None:
+            for word in self.equal_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords:
+                stopwords.remove_stopword(word)
+        return stopwords
+
+
     def parse_sentence(self, sentence, stopwordsFilter=None):
         sys.tracebacklimit = 0  # Remove traceback from Exception
 
@@ -682,6 +685,8 @@ class Parser:
         last_table_position = 0
         columns_of_select = []
         columns_of_where = []
+
+        stopwordsFilter = self.adjust_stopwords(stopwordsFilter)
 
         if stopwordsFilter is not None:
             sentence = stopwordsFilter.filter(sentence)
@@ -706,17 +711,18 @@ class Parser:
         #  in the rest of the parsing algorithm (about line 725) '''
 
         for i in range(0, len(input_word_list)):
-            for table_name in self.database_dico:
-                if (input_word_list[i] == table_name) or (
-                            input_word_list[i] in self.database_object.get_table_by_name(table_name).equivalences):
+            similar_tables = self.database_object.get_similar_tables(input_word_list[i])
+            if len(similar_tables) > 0:
+                for table in similar_tables:
                     if number_of_table_temp == 0:
                         start_phrase = input_word_list[:i]
                     number_of_table_temp += 1
                     last_table_position_temp = i
 
-                columns = self.database_object.get_table_by_name(table_name).get_columns()
-                for column in columns:
-                    if (input_word_list[i] == column.name) or (input_word_list[i] in column.equivalences):
+                    # Should where should be next to table?
+                    column_to_find = input_word_list[i + 1] if len(input_word_list) > (i + 1) else input_word_list[i]
+                    columns = self.database_object.get_similar_columns(column_to_find, table['schema'], table['name'])
+                    if len(columns) > 0:
                         if number_of_where_column_temp == 0:
                             med_phrase = input_word_list[len(start_phrase):last_table_position_temp + 1]
                         number_of_where_column_temp += 1
@@ -725,9 +731,9 @@ class Parser:
                         if (number_of_table_temp != 0) and (number_of_where_column_temp == 0) and (
                                     i == (len(input_word_list) - 1)):
                             med_phrase = input_word_list[len(start_phrase):]
-                else:
-                    continue
-                break
+            else:
+                continue
+            break
 
         end_phrase = input_word_list[len(start_phrase) + len(med_phrase):]
 
@@ -792,38 +798,44 @@ class Parser:
 
         ''' ----------------------------------------------------------------------------------------------------------- '''
 
-        tables_of_from = []
         select_phrase = ''
         from_phrase = ''
-        where_phrase = ''
 
         words = re.findall(r"[\w]+", self.remove_accents(sentence))
 
+        unique_tables_of_from = set()
+        tables_of_from = []  # ~ ordered set
         for i in range(0, len(words)):
-            for table_name in self.database_dico:
-                if (words[i] == table_name) or (
-                            words[i] in self.database_object.get_table_by_name(table_name).equivalences):
+            similar_tables = self.database_object.get_similar_tables(words[i])
+            if len(similar_tables) > 0:
+                for table in similar_tables:
                     if number_of_table == 0:
                         select_phrase = words[:i]
-                    tables_of_from.append(table_name)
-                    number_of_table += 1
+                    table_name = table['schema'] + '.' + table['name']
+                    if table_name not in unique_tables_of_from:
+                        unique_tables_of_from.add(table_name)
+                        tables_of_from.append(table_name)
+                        number_of_table += 1
                     last_table_position = i
 
-                columns = self.database_object.get_table_by_name(table_name).get_columns()
-                for column in columns:
-                    if (words[i] == column.name) or (words[i] in column.equivalences):
-                        if number_of_table == 0:
-                            columns_of_select.append(column.name)
-                            number_of_select_column += 1
+                    # Should where should be next to table?
+                    column_to_find = words[i + 1] if len(words) > (i + 1) else words[i]
+                    columns = self.database_object.get_similar_columns(column_to_find, table['schema'], table['name'])
+                    if len(columns) > 0:
+                        for column in columns:
+                            if number_of_table == 0:
+                                columns_of_select.append(column)
+                                number_of_select_column += 1
+                            else:
+                                if number_of_where_column == 0:
+                                    from_phrase = words[len(select_phrase):last_table_position + 1]
+                                if column not in columns_of_where:  # why do we need duplicates?
+                                    columns_of_where.append(column)
+                                    number_of_where_column += 1
+                            break  # TODO: why break?
                         else:
-                            if number_of_where_column == 0:
-                                from_phrase = words[len(select_phrase):last_table_position + 1]
-                            columns_of_where.append(column.name)
-                            number_of_where_column += 1
-                        break
-                    else:
-                        if (number_of_table != 0) and (number_of_where_column == 0) and (i == (len(words) - 1)):
-                            from_phrase = words[len(select_phrase):]
+                            if (number_of_table != 0) and (number_of_where_column == 0) and (i == (len(words) - 1)):
+                                from_phrase = words[len(select_phrase):]
 
         where_phrase = words[len(select_phrase) + len(from_phrase):]
 
@@ -833,12 +845,12 @@ class Parser:
         if len(tables_of_from) > 0:
             from_phrases = []
             previous_index = 0
+            tables_of_from_as_text = ' '.join([full_table_name.split('.')[-1] for full_table_name in tables_of_from])
             for i in range(0, len(from_phrase)):
-                for table in tables_of_from:
-                    if (from_phrase[i] == table) or (
-                                from_phrase[i] in self.database_object.get_table_by_name(table).equivalences):
-                        from_phrases.append(from_phrase[previous_index:i + 1])
-                        previous_index = i + 1
+                max_similarity = self.database_object.get_max_word_similarity(from_phrase[i], tables_of_from_as_text)
+                if max_similarity >= MIN_WORD_SIMILARITY:
+                    from_phrases.append(from_phrase[previous_index:i + 1])
+                    previous_index = i + 1
 
             last_junction_word_index = -1
 
@@ -861,15 +873,6 @@ class Parser:
             else:
                 from_phrase = sum(from_phrases[:last_junction_word_index + 1], [])
                 where_phrase = sum(from_phrases[last_junction_word_index + 1:], []) + where_phrase
-
-        real_tables_of_from = []
-
-        for word in from_phrase:
-            for table in tables_of_from:
-                if (word == table) or (word in self.database_object.get_table_by_name(table).equivalences):
-                    real_tables_of_from.append(table)
-
-        tables_of_from = real_tables_of_from
 
         if len(tables_of_from) == 0:
             raise ParsingException("No table name found in sentence!")
@@ -917,7 +920,7 @@ class Parser:
                                          self.sum_keywords, self.average_keywords, self.max_keywords, self.min_keywords,
                                          self.distinct_keywords, self.database_dico, self.database_object)
             from_parser = FromParser(tables_of_from, columns_of_select, columns_of_where, self.database_object)
-            where_parser = WhereParser(new_where_phrase, tables_of_from, columns_of_values_of_where,
+            where_parser = WhereParser(new_where_phrase, tables_of_from, columns_of_where, columns_of_values_of_where,
                                        self.count_keywords, self.sum_keywords, self.average_keywords, self.max_keywords,
                                        self.min_keywords, self.greater_keywords, self.less_keywords,
                                        self.between_keywords, self.negation_keywords, self.junction_keywords,
@@ -955,4 +958,4 @@ class Parser:
             query.set_group_by(group_by_objects[i])
             query.set_order_by(order_by_objects[i])
 
-        return queries
+        return [query for query in queries if not query.get_corrupted()]

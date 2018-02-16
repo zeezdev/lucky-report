@@ -3,13 +3,15 @@ import re
 
 from .constants import Color
 from .table import Table
+from .pg_database_helper import PgDatabaseHelper
 
 
 class Database:
 
-    def __init__(self):
+    def __init__(self, database_connection_string):
         self.tables = []
         self.thesaurus_object = None
+        self.database_helper = PgDatabaseHelper(database_connection_string, 'lucky_search')
 
     def set_thesaurus(self, thesaurus):
         self.thesaurus_object = thesaurus
@@ -26,49 +28,63 @@ class Database:
                 if column.name == name:
                     return column
 
+
+    def get_similar_tables(self, table_name, schema_name=None):
+        similar_tables = self.database_helper.get_similar_tables(table_name, schema_name)
+        # similar_tables += self.thesaurus_object.get_synonyms_of_a_word(table_name)  # TODO: synonims?
+        return similar_tables
+
+    def get_similar_columns(self, column_name, schema_name=None, table_name=None):
+        similar_columns = self.database_helper.get_similar_columns(column_name, schema_name, table_name)
+        # similar_columns += self.thesaurus_object.get_synonyms_of_a_word(column_name)  # TODO: synonims?
+        return similar_columns
+
+    def get_max_word_similarity(self, word, text):  # TODO: some library to do this without DB
+        return float(self.database_helper.get_max_word_similarity(word, text)[0])
+
     def get_table_by_name(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table
 
     def get_tables_into_dictionary(self):
         data = {}
         for table in self.tables:
-            data[table.name] = []
+            data[table.full_name] = []
             for column in table.get_columns():
-                data[table.name].append(column.name)
+                data[table.full_name].append(column.name)
         return data
 
     def get_primary_keys_by_table(self):
         data = {}
         for table in self.tables:
-            data[table.name] = table.get_primary_keys()
+            data[table.full_name] = table.get_primary_keys()
         return data
 
     def get_foreign_keys_by_table(self):
         data = {}
         for table in self.tables:
-            data[table.name] = table.get_foreign_keys()
+            data[table.full_name] = table.get_foreign_keys()
         return data
 
     def get_primary_keys_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_primary_keys()
 
     def get_primary_key_names_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_primary_key_names()
 
     def get_foreign_keys_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_foreign_keys()
 
     def get_foreign_key_names_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_foreign_key_names()
 
     def add_table(self, table):
@@ -93,15 +109,31 @@ class Database:
                 if 'TABLE' in alter_table_string:
                     self.alter_table(alter_table_string)
 
+    def load_from_db(self):
+        for db_table in self.database_helper.get_tables():
+            table = Table()
+            table.schema = db_table['schema']
+            table.name = db_table['name']
+            for column_definition in self.database_helper.get_columns(table.schema, table.name):
+                table.add_column(column_definition['name'], self.predict_type(column_definition['type']), None)
+            self.add_table(table)
+
+        for key in self.database_helper.get_foreign_keys():
+            full_table_name = '{0:s}.{1:s}'.format(key['table_schema'], key['table_name'])
+            full_foreign_table_name = '{0:s}.{1:s}'.format(key['foreign_table_schema'], key['foreign_table_name'])
+            table = self.get_table_by_name(full_table_name)
+            if table is not None:
+                table.add_foreign_key(key['column_name'], full_foreign_table_name, key['foreign_column_name'])
+
     def predict_type(self, string):
         if 'int' in string.lower():
             return 'int'
         elif 'char' in string.lower() or 'text' in string.lower():
             return 'string'
-        elif 'date' in string.lower():
+        elif 'date' in string.lower() or 'time' in string.lower():
             return 'date'
         else:
-            return 'unknow'
+            return 'unknown'
 
     def create_table(self, table_string):
         lines = table_string.split("\n")
