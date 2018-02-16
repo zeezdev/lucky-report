@@ -10,6 +10,7 @@ from .query import *
 
 # TODO: move to config
 MIN_WORD_SIMILARITY = 0.4
+MAX_JOIN_DEPTH = 4
 
 class SelectParser(Thread):
     def __init__(self, columns_of_select, tables_of_from, phrase, count_keywords, sum_keywords, average_keywords,
@@ -177,6 +178,8 @@ class FromParser(Thread):
         return links
 
     def is_join(self, historic, table_src, table_trg):
+        if len(historic) > MAX_JOIN_DEPTH:
+            return []
         historic = historic
         links = self.get_all_direct_linked_tables_of_a_table(table_src)
 
