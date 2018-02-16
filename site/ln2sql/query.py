@@ -388,6 +388,7 @@ class Query():
     where = None
     group_by = None
     order_by = None
+    _corrupted = False
 
     def __init__(self, select=None, _from=None, join=None, where=None, group_by=None, order_by=None):
         if select is not None:
@@ -450,6 +451,12 @@ class Query():
 
     def get_order_by(self):
         return self.order_by
+
+    def get_corrupted(self):
+        return self._corrupted
+
+    def set_corrupted(self, value):
+        self._corrupted = bool(value)
 
     def __str__(self):
         return '\n' + str(self.select) + str(self._from) + str(self.join) + str(self.where) + str(self.group_by) + str(

@@ -233,27 +233,23 @@ class FromParser(Thread):
             for column in self.columns_of_select:
                 if column not in self.database_dico[table_of_from]:
                     foreign_table = self.get_tables_of_column(column)[0]
-                    join_object.add_table(foreign_table)
                     link = self.get_link(table_of_from, foreign_table)
 
                     if not link:
-                        self.queries = ParsingException(
-                            "There is at least column `" + column + "` that is unreachable from table `" + table_of_from.upper() + "`!")
-                        return
+                        query.set_corrupted(True)
                     else:
+                        join_object.add_table(foreign_table)
                         links.extend(link)
 
             for column in self.columns_of_where:
                 if column not in self.database_dico[table_of_from]:
                     foreign_table = self.get_tables_of_column(column)[0]
-                    join_object.add_table(foreign_table)
                     link = self.get_link(table_of_from, foreign_table)
 
                     if not link:
-                        self.queries = ParsingException(
-                            "There is at least column `" + column + "` that is unreachable from table `" + table_of_from.upper() + "`!")
-                        return
+                        query.set_corrupted(True)
                     else:
+                        join_object.add_table(foreign_table)
                         links.extend(link)
 
             join_object.set_links(self.unique_ordered(links))
@@ -955,4 +951,4 @@ class Parser:
             query.set_group_by(group_by_objects[i])
             query.set_order_by(order_by_objects[i])
 
-        return queries
+        return [query for query in queries if not query.get_corrupted()]
