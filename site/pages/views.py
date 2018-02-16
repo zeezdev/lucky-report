@@ -9,7 +9,6 @@ from ln2sql import Ln2sql
 
 def translate(request):
     ln2sql = Ln2sql(
-        database_path="/home/user/Documents/dd.sql",
         language_path="/home/user/work/ln2sql3/ln2sql/lang_store/english.csv",
         database_connection_string="Add a connection string",
         # json_output_path=args.json_output,

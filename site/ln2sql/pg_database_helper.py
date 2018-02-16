@@ -2,7 +2,7 @@ import psycopg2, psycopg2.pool
 
 
 class PgDatabaseHelper:
-    def __init__(self, conn_string, schema):
+    def __init__(self, conn_string, schema='public'):
         self._conn_string = conn_string
         self._schema = schema
         self._pool = psycopg2.pool.ThreadedConnectionPool(8, 64, conn_string)
