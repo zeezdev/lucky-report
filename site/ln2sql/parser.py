@@ -10,6 +10,7 @@ from .query import *
 
 # TODO: move to config
 MIN_WORD_SIMILARITY = 0.4
+MIN_COLUMN_NAME_SIMILARITY = 0.3
 MAX_JOIN_DEPTH = 4
 
 class SelectParser(Thread):
@@ -265,7 +266,7 @@ class FromParser(Thread):
 
 
 class WhereParser(Thread):
-    def __init__(self, phrases, tables_of_from, columns_of_values_of_where, count_keywords, sum_keywords,
+    def __init__(self, phrases, tables_of_from, columns_of_where, columns_of_values_of_where, count_keywords, sum_keywords,
                  average_keywords, max_keywords, min_keywords, greater_keywords, less_keywords, between_keywords,
                  negation_keywords, junction_keywords, disjunction_keywords, like_keywords, distinct_keywords,
                  database_dico, database_object):
@@ -273,6 +274,7 @@ class WhereParser(Thread):
         self.where_objects = []
         self.phrases = phrases
         self.tables_of_from = tables_of_from
+        self.column_of_where = columns_of_where
         self.columns_of_values_of_where = columns_of_values_of_where
         self.count_keywords = count_keywords
         self.sum_keywords = sum_keywords
@@ -379,8 +381,7 @@ class WhereParser(Thread):
         return already
 
     def run(self):
-        number_of_where_columns = 0
-        columns_of_where = []
+        columns_of_where = self.column_of_where
         offset_of = {}
         column_offset = []
         self.count_keyword_offset = []
@@ -399,18 +400,12 @@ class WhereParser(Thread):
         for phrase in self.phrases:
             phrase_offset_string = ''
             for i in range(0, len(phrase)):
-                for table_name in self.database_dico:
-                    columns = self.database_object.get_table_by_name(table_name).get_columns()
-                    for column in columns:
-                        if (phrase[i] == column.name) or (phrase[i] in column.equivalences):
-                            number_of_where_columns += 1
-                            columns_of_where.append(column.name)
+                if self.database_object.get_max_word_similarity(phrase[i], ' '.join(
+                        columns_of_where)) >= MIN_COLUMN_NAME_SIMILARITY:
                     offset_of[phrase[i]] = i
                     column_offset.append(i)
-                            break
                 else:
                     continue
-                    break
 
                 phrase_keyword = str(phrase[i]).lower()  # for robust keyword matching
                 phrase_offset_string += phrase_keyword + " "
@@ -916,7 +911,7 @@ class Parser:
                                          self.sum_keywords, self.average_keywords, self.max_keywords, self.min_keywords,
                                          self.distinct_keywords, self.database_dico, self.database_object)
             from_parser = FromParser(tables_of_from, columns_of_select, columns_of_where, self.database_object)
-            where_parser = WhereParser(new_where_phrase, tables_of_from, columns_of_values_of_where,
+            where_parser = WhereParser(new_where_phrase, tables_of_from, columns_of_where, columns_of_values_of_where,
                                        self.count_keywords, self.sum_keywords, self.average_keywords, self.max_keywords,
                                        self.min_keywords, self.greater_keywords, self.less_keywords,
                                        self.between_keywords, self.negation_keywords, self.junction_keywords,
