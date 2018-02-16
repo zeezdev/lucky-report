@@ -14,12 +14,13 @@ class Ln2sql:
             self,
             database_path,
             language_path,
+            database_connection_string,
             json_output_path=None,
             thesaurus_path=None,
             stopwords_path=None,
     ):
 
-        database = Database()
+        database = Database(database_connection_string)
         self.stopwordsFilter = None
 
         if thesaurus_path:
@@ -31,7 +32,8 @@ class Ln2sql:
             self.stopwordsFilter = StopwordFilter()
             self.stopwordsFilter.load(stopwords_path)
 
-        database.load(database_path)
+        # database.load(database_path)
+        database.load_from_db()
         # database.print_me()
 
         config = LangConfig()

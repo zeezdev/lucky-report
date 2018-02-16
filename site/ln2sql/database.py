@@ -3,6 +3,7 @@ import re
 
 from .constants import Color
 from .table import Table
+from .pg_database_helper import PgDatabaseHelper
 
 
 class Database:
@@ -10,6 +11,7 @@ class Database:
     def __init__(self):
         self.tables = []
         self.thesaurus_object = None
+        self.database_helper = PgDatabaseHelper(database_conection_string, 'lucky_search')
 
     def set_thesaurus(self, thesaurus):
         self.thesaurus_object = thesaurus
@@ -93,15 +95,31 @@ class Database:
                 if 'TABLE' in alter_table_string:
                     self.alter_table(alter_table_string)
 
+    def load_from_db(self):
+        for db_table in self.database_helper.get_tables():
+            table = Table()
+            table.schema = db_table['schema']
+            table.name = db_table['name']
+            for column_definition in self.database_helper.get_columns(table.schema, table.name):
+                table.add_column(column_definition['name'], self.predict_type(column_definition['type']), None)
+            self.add_table(table)
+
+        for key in self.database_helper.get_foreign_keys():
+            full_table_name = '{0:s}.{1:s}'.format(key['table_schema'], key['table_name'])
+            full_foreign_table_name = '{0:s}.{1:s}'.format(key['foreign_table_schema'], key['foreign_table_name'])
+            table = self.get_table_by_name(full_table_name)
+            if table is not None:
+                table.add_foreign_key(key['column_name'], full_foreign_table_name, key['foreign_column_name'])
+
     def predict_type(self, string):
         if 'int' in string.lower():
             return 'int'
         elif 'char' in string.lower() or 'text' in string.lower():
             return 'string'
-        elif 'date' in string.lower():
+        elif 'date' in string.lower() or 'time' in string.lower():
             return 'date'
         else:
-            return 'unknow'
+            return 'unknown'
 
     def create_table(self, table_string):
         lines = table_string.split("\n")
