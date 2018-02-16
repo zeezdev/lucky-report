@@ -1,9 +1,13 @@
 from .column import Column
 
 
+def get_full_table_name(schema, name):
+    return '{0:s}.{1:s}'.format(schema, name) if schema is not None else name
+
 class Table:
-    def __init__(self, name='', columns=None, equivalences=None):
+    def __init__(self, name='', schema=None, columns=None, equivalences=None):
         self._name = name
+        self._schema = schema
 
         if not columns:
             columns = []
@@ -20,6 +24,18 @@ class Table:
     @name.setter
     def name(self, value):
         self._name = value
+
+    @property
+    def schema(self):
+        return self._schema
+
+    @schema.setter
+    def schema(self, value):
+        self._schema = value
+
+    @property
+    def full_name(self):
+        return get_full_table_name(self._schema, self._name)
 
     def get_number_of_columns(self):
         return len(self.columns)

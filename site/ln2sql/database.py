@@ -28,47 +28,47 @@ class Database:
 
     def get_table_by_name(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table
 
     def get_tables_into_dictionary(self):
         data = {}
         for table in self.tables:
-            data[table.name] = []
+            data[table.full_name] = []
             for column in table.get_columns():
-                data[table.name].append(column.name)
+                data[table.full_name].append(column.name)
         return data
 
     def get_primary_keys_by_table(self):
         data = {}
         for table in self.tables:
-            data[table.name] = table.get_primary_keys()
+            data[table.full_name] = table.get_primary_keys()
         return data
 
     def get_foreign_keys_by_table(self):
         data = {}
         for table in self.tables:
-            data[table.name] = table.get_foreign_keys()
+            data[table.full_name] = table.get_foreign_keys()
         return data
 
     def get_primary_keys_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_primary_keys()
 
     def get_primary_key_names_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_primary_key_names()
 
     def get_foreign_keys_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_foreign_keys()
 
     def get_foreign_key_names_of_table(self, table_name):
         for table in self.tables:
-            if table.name == table_name:
+            if table.full_name == table_name:
                 return table.get_foreign_key_names()
 
     def add_table(self, table):
