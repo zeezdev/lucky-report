@@ -8,10 +8,10 @@ from .pg_database_helper import PgDatabaseHelper
 
 class Database:
 
-    def __init__(self):
+    def __init__(self, database_connection_string):
         self.tables = []
         self.thesaurus_object = None
-        self.database_helper = PgDatabaseHelper(database_conection_string, 'lucky_search')
+        self.database_helper = PgDatabaseHelper(database_connection_string, 'lucky_search')
 
     def set_thesaurus(self, thesaurus):
         self.thesaurus_object = thesaurus
@@ -27,6 +27,20 @@ class Database:
             for column in table.get_columns():
                 if column.name == name:
                     return column
+
+
+    def get_similar_tables(self, table_name, schema_name=None):
+        similar_tables = self.database_helper.get_similar_tables(table_name, schema_name)
+        # similar_tables += self.thesaurus_object.get_synonyms_of_a_word(table_name)  # TODO: synonims?
+        return similar_tables
+
+    def get_similar_columns(self, column_name, schema_name=None, table_name=None):
+        similar_columns = self.database_helper.get_similar_columns(column_name, schema_name, table_name)
+        # similar_columns += self.thesaurus_object.get_synonyms_of_a_word(column_name)  # TODO: synonims?
+        return similar_columns
+
+    def get_max_word_similarity(self, word, text):  # TODO: some library to do this without DB
+        return float(self.database_helper.get_max_word_similarity(word, text)[0])
 
     def get_table_by_name(self, table_name):
         for table in self.tables:
