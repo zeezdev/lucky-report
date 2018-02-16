@@ -13,6 +13,12 @@ class StopwordFilter:
     def get_stopword_list(self):
         return self.words
 
+    def remove_stopword(self, word):
+        try:
+            self.words.remove(word.lower())
+        except (KeyError) as _:
+            pass
+
     def filter(self, sentence):
         tmp_sentence = ""
         words = re.findall(r"[\w]+", self.remove_accents(sentence))
@@ -33,7 +39,7 @@ class StopwordFilter:
         return filename
 
     def load(self, path):
-        with open(self._generate_path(path)) as f:
+        with open(self._generate_path(path), encoding='utf8') as f:
             lines = f.read().split('\n')
             for word in lines:
                 stopword = self.remove_accents(word).lower()

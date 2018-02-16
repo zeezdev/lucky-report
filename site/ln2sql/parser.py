@@ -669,6 +669,13 @@ class Parser:
         nkfd_form = unicodedata.normalize('NFKD', str(string))
         return "".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
+    def adjust_stopwords(self, stopwords):
+        if stopwords is not None:
+            for word in self.equal_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords:
+                stopwords.remove_stopword(word)
+        return stopwords
+
+
     def parse_sentence(self, sentence, stopwordsFilter=None):
         sys.tracebacklimit = 0  # Remove traceback from Exception
 
@@ -678,6 +685,8 @@ class Parser:
         last_table_position = 0
         columns_of_select = []
         columns_of_where = []
+
+        stopwordsFilter = self.adjust_stopwords(stopwordsFilter)
 
         if stopwordsFilter is not None:
             sentence = stopwordsFilter.filter(sentence)
