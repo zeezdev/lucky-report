@@ -6,6 +6,7 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from flask_sqlalchemy_session import flask_scoped_session
+from pages.views import pages_app
 
 
 session_opts = {
@@ -24,8 +25,69 @@ class BeakerSessionInterface(SessionInterface):
         session.save()
 
 
-def index_work_db():
+def get_pg_connection_string(host, dbname, user, password):
+    return "host=%s dbname=%s user=%s password=%s" % (host, dbname, user, password)
+
+
+def get_tables(pg_cur):
+    pg_cur.execute("""
+    SELECT DISTINCT table_schema, table_name
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema NOT IN('information_schema', 'pg_catalog')
+    """)
+    return pg_cur.fetchall()
+
+
+def get_columns(pg_cur, tables_names):
+    pg_cur.execute("""
+    SELECT table_schema, table_name, column_name, data_type, ordinal_position
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE table_schema NOT IN('information_schema', 'pg_catalog')
+    ORDER BY table_schema, table_name, ordinal_position, column_name
+    """)
+    return pg_cur.fetchall()
+
+
+def index_work_db(config, db):
     from models import Table, Column
+    import psycopg2
+
+    # clear old data
+    db.session.query(Column).filter().delete()
+    db.session.query(Table).filter().delete()
+
+    # connect to db
+    pg_conn = psycopg2.connect(
+        get_pg_connection_string(
+            config['DBHOST'],
+            config['DBNAME'],
+            config['DBUSER'],
+            config['DBPASS']))
+
+    cur = pg_conn.cursor()
+
+    # find tables
+    rows = get_tables(cur)
+    tables = []
+    for row in rows:
+        table = Table(schema=row[0], name=row[1])
+        tables.append(table)
+        db.session.add(table)
+    rows = None
+    db.session.commit()  # save tables in db
+
+    # find columns
+    tables_names = [table.name for table in tables]
+    rows = get_columns(cur, tables_names)
+    columns = []
+    for row in rows:
+        table = next((t for t in tables if t.schema == row[0] and t.name == row[1]), None)
+        if table is not None:
+            column = Column(name=row[2], data_type=row[3], table_id=table.id)
+            columns.append(column)
+            db.session.add(column)
+    rows = None
+    db.session.commit()  # save columns in db
 
 
 # # application factory, see: http://flask.pocoo.org/docs/patterns/appfactories/
@@ -63,10 +125,9 @@ if int(os.environ.get('RUN_MIGRATION', 0)) == 0:
 db = SQLAlchemy(app)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-index_work_db()
+index_work_db(app.config, db)
 
 # import & register blueprints
-from pages.views import pages_app
 app.register_blueprint(pages_app)
 
 # engine = create_engine("postgresql://luckyreportuser:luckyreportuser@localhost/luckyreport")

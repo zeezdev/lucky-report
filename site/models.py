@@ -1,18 +1,23 @@
 import enum
-from app import db
+# from app import db
 # from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy import Index, text, UniqueConstraint
+from sqlalchemy import Index, text, UniqueConstraint, Column as Cl, BigInteger, Text, DateTime, ForeignKey, Float, Enum
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql.functions import now
 # from sqlalchemy.schema import UniqueConstraint, text
 
 
-class Request(db.Model):
+Base = declarative_base()
+
+
+class Request(Base):
     __tablename__ = 'requests'
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    request = db.Column(db.Text, nullable=True)
-    created_on = db.Column(db.DateTime, server_default=db.func.now())
-    session = db.Column(db.Text)
+    id = Cl(BigInteger, primary_key=True)
+    request = Cl(Text, nullable=True)
+    created_on = Cl(DateTime, server_default=now())
+    session = Cl(Text)
     result = relationship("Result", back_populates="request")
 
     def __init__(self, request, session):
@@ -44,15 +49,15 @@ ReportTypeEnum2int = {
 }
 
 
-class Result(db.Model):
+class Result(Base):
     __tablename__ = 'results'
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    request_id = db.Column(db.BigInteger, db.ForeignKey('requests.id'))
+    id = Cl(BigInteger, primary_key=True)
+    request_id = Cl(BigInteger, ForeignKey('requests.id'))
     request = relationship("Request", back_populates="result")
-    query = db.Column(db.Text, nullable=False)
-    rate = db.Column(db.Float)
-    report_type = db.Column(db.Enum(ReportTypeEnum), default=ReportTypeEnum.table)
+    query = Cl(Text, nullable=False)
+    rate = Cl(Float)
+    report_type = Cl(Enum(ReportTypeEnum), default=ReportTypeEnum.table)
 
     def __init__(self, request_id, query, rate, report_type):
         self.request_id = request_id
@@ -76,7 +81,7 @@ class Result(db.Model):
         }
 
 
-class Table(db.Model):
+class Table(Base):
     __tablename__ = "tables"
     __table_args__ = (
         UniqueConstraint('schema', 'name', name="_schema_name_uc"),
@@ -85,9 +90,9 @@ class Table(db.Model):
         #       postgresql_using="gist")
     )
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    schema = db.Column(db.Text)
-    name = db.Column(db.Text, nullable=False)
+    id = Cl(BigInteger, primary_key=True)
+    schema = Cl(Text)
+    name = Cl(Text, nullable=False)
     column = relationship("Column", back_populates="table")
 
     def __init__(self, schema, name):
@@ -98,21 +103,21 @@ class Table(db.Model):
         return "%s.%s" % (self.schema, self.name)
 
 
-class Column(db.Model):
+class Column(Base):
     __tablename__ = "columns"
     __table_args__ = (
         UniqueConstraint('table_id', 'name', name="_table_name_uc"),
     )
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    name = db.Column(db.Text, nullable=False)
-    data_type = db.Column(db.Text, nullable=False)  # TODO: change in ln2sql
-    table_id = db.Column(db.BigInteger, db.ForeignKey("tables.id"))
+    id = Cl(BigInteger, primary_key=True)
+    name = Cl(Text, nullable=False)
+    data_type = Cl(Text, nullable=False)  # TODO: change in ln2sql
+    table_id = Cl(BigInteger, ForeignKey("tables.id"))
     table = relationship("Table", back_populates="column")
 
-    def __init__(self, name, date_type, table_id):
+    def __init__(self, name, data_type, table_id):
         self.name = name
-        self.data_type = date_type
+        self.data_type = data_type
         self.table_id = table_id
 
     def __str__(self):
@@ -127,14 +132,14 @@ class Column(db.Model):
 #                          'foreign_table_name', 'foreign_column_name'),
 #     )
 #
-#     id = db.Column(db.BigInteger, primary_key=True)
-#     table_schema = db.Column(db.Text),
+#     id = Cl(BigInteger, primary_key=True)
+#     table_schema = Cl(Text),
 #
-#     table_name = db.Column(db.Text),
-#     column_name = db.Column(db.Text),
-#     foreign_table_schema = db.Column(db.Text),
-#     foreign_table_name = db.Column(db.Text),
-#     foreign_column_name = db.Column(db.Text)
+#     table_name = Cl(Text),
+#     column_name = Cl(Text),
+#     foreign_table_schema = Cl(Text),
+#     foreign_table_name = Cl(Text),
+#     foreign_column_name = Cl(Text)
 #
 #     def __str__(self):
 #         return ""
