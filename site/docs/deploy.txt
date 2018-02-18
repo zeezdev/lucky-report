@@ -11,6 +11,8 @@ DB migrations:
 # python manage.py db migrate
 # python manage.py db upgrade
 
+# db upgrade head (if "Target database is not up to date." raised) https://github.com/miguelgrinberg/Flask-Migrate/issues/4
+
 https://realpython.com/blog/python/flask-by-example-part-3-text-processing-with-requests-beautifulsoup-nltk/
 http://flask.pocoo.org/snippets/121/
 http://docs.sqlalchemy.org/en/rel_1_0/core/defaults.html#server-side-defaults

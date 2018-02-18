@@ -24,6 +24,10 @@ class BeakerSessionInterface(SessionInterface):
         session.save()
 
 
+def index_work_db():
+    from models import Table, Column
+
+
 # # application factory, see: http://flask.pocoo.org/docs/patterns/appfactories/
 # def create_app(config_filename):
 #     app = Flask(__name__)
@@ -58,6 +62,8 @@ if int(os.environ.get('RUN_MIGRATION', 0)) == 0:
 # SQLAlchemy
 db = SQLAlchemy(app)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+index_work_db()
 
 # import & register blueprints
 from pages.views import pages_app
