@@ -11,7 +11,8 @@ class Database:
     def __init__(self, database_connection_string):
         self.tables = []
         self.thesaurus_object = None
-        self.database_helper = PgDatabaseHelper(database_connection_string, 'lucky_search')
+        self.database_helper = PgDatabaseHelper(database_connection_string, 'public')
+        # self.database_helper = PgDatabaseHelper(database_connection_string, 'lucky_search')
 
     def set_thesaurus(self, thesaurus):
         self.thesaurus_object = thesaurus

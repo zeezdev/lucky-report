@@ -9,9 +9,13 @@ class Config(object):
     SECRET_KEY = 'this-really-needs-to-be-changed'
     # SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     SQLALCHEMY_DATABASE_URI = "postgresql://luckyreportuser:luckyreportuser@localhost/luckyreport"
+    LANG_STORE_PATH = "/home/zeez/work/APPLIEDTECH/ln2sql/ln2sql/lang_store/"
 
     # CONNECTION STRING OF DB FOR INDEXATION
-    WORK_DATABASE_URI = "postgresql://$DBUSER:$PASSWORD@localhost/$DBNAME"
+    DBNAME = "zeezdev"
+    DBUSER = "zeezdevuser"
+    DBPASS = "pass"
+    DBHOST = "localhost"
 
 
 class ProductionConfig(Config):

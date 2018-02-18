@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, session, jsonify
+import os
+from flask import Blueprint, render_template, request, jsonify
 # from flask_sqlalchemy_session import current_session
 
 pages_app = Blueprint('pages_app', __name__)
@@ -9,9 +10,9 @@ from ln2sql import Ln2sql
 
 def translate(user_request):
     ln2sql = Ln2sql(
-        database_path="/home/user/Documents/dd.sql",
-        language_path="/home/user/work/ln2sql3/ln2sql/lang_store/english.csv",
-        database_connection_string=app.config['WORK_DATABASE_URI'],
+        database_path=None,
+        language_path=os.path.join(app.config['LANG_STORE_PATH'], "english.csv"),
+        database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
         # stopwords_path=args.stopwords,
