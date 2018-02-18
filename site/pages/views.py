@@ -3,19 +3,19 @@ from flask import Blueprint, render_template, request, session, jsonify
 
 pages_app = Blueprint('pages_app', __name__)
 from models import Request, Result, ReportTypeEnum
-from app import db
+from app import db, app
 from ln2sql import Ln2sql
 
 
-def translate(request):
+def translate(user_request):
     ln2sql = Ln2sql(
         database_path="/home/user/Documents/dd.sql",
         language_path="/home/user/work/ln2sql3/ln2sql/lang_store/english.csv",
-        database_connection_string="Add a connection string",
+        database_connection_string=app.config['WORK_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
         # stopwords_path=args.stopwords,
-    ).get_query("What servers name exists?")
+    ).get_query(user_request)
     return ln2sql
 
 
@@ -91,9 +91,9 @@ def api_request():
     results = []
     t = []
     try:
-        t = translate("")
-    except:
-        pass
+        t = translate(request_text)
+    except Exception as ex:
+        print("Translation failed: %s" % str(ex))
 
     # for r in t:
     if isinstance(t, str):

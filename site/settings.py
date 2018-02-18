@@ -10,6 +10,9 @@ class Config(object):
     # SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     SQLALCHEMY_DATABASE_URI = "postgresql://luckyreportuser:luckyreportuser@localhost/luckyreport"
 
+    # CONNECTION STRING OF DB FOR INDEXATION
+    WORK_DATABASE_URI = "postgresql://$DBUSER:$PASSWORD@localhost/$DBNAME"
+
 
 class ProductionConfig(Config):
     DEBUG = False

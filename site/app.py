@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask.sessions import SessionInterface
 from beaker.middleware import SessionMiddleware
@@ -41,8 +42,6 @@ class BeakerSessionInterface(SessionInterface):
 #     app.register_blueprint(pages_app)
 #
 #     return app, db
-
-import os
 
 app = Flask(__name__)
 try:
