@@ -12,7 +12,6 @@ from .thesaurus import Thesaurus
 class Ln2sql:
     def __init__(
             self,
-            database_path,
             language_path,
             database_connection_string,
             json_output_path=None,

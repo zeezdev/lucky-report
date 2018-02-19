@@ -39,7 +39,7 @@ class StopwordFilter:
         return filename
 
     def load(self, path):
-        with open(self._generate_path(path), encoding='utf8') as f:
+        with open(self._generate_path(path)) as f:
             lines = f.read().split('\n')
             for word in lines:
                 stopword = self.remove_accents(word).lower()

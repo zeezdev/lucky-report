@@ -10,7 +10,6 @@ from ln2sql import Ln2sql
 
 def translate(user_request):
     ln2sql = Ln2sql(
-        database_path=None,
         language_path=os.path.join(app.config['LANG_STORE_PATH'], "english.csv"),
         database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,

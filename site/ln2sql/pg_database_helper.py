@@ -2,7 +2,7 @@ import psycopg2, psycopg2.pool
 
 
 class PgDatabaseHelper:
-    def __init__(self, conn_string, schema):
+    def __init__(self, conn_string, schema='public'):
         self._conn_string = conn_string
         self._schema = schema
         self._pool = psycopg2.pool.ThreadedConnectionPool(8, 64, conn_string)
@@ -46,15 +46,12 @@ class PgDatabaseHelper:
         return [row[0] for row in rows]
 
     def get_foreign_keys(self):
-        query = """SELECT
-                    tc.table_schema, tc.table_name, kcu.column_name,
-                    ccu.table_schema AS foreign_table_name, ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
-                FROM
-                    information_schema.table_constraints AS tc
-                    JOIN information_schema.key_column_usage AS kcu USING (constraint_name)
-                    JOIN information_schema.constraint_column_usage AS ccu USING (constraint_name)
-                WHERE
-                    tc.constraint_type = 'FOREIGN KEY';"""
+        query = """SELECT t.schema, t.name, c.name, ft.schema, ft.name, fc.name
+            FROM foreign_keys AS fk
+            JOIN columns AS c ON (fk.column_id = c.id)
+            JOIN tables AS t ON (c.table_id = t.id)
+            JOIN columns AS fc ON (fk.foreign_column_id = fc.id)
+            JOIN tables AS ft ON (fc.table_id = ft.id);"""
         rows = self._get_rows(query)
         return [{'table_schema': row[0], 'table_name': row[1], 'column_name': row[2],
                  'foreign_table_schema': row[3], 'foreign_table_name': row[4], 'foreign_column_name': row[5]}
