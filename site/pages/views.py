@@ -1,20 +1,21 @@
-from flask import Blueprint, render_template, request, session, jsonify
+import os
+from flask import Blueprint, render_template, request, jsonify
 # from flask_sqlalchemy_session import current_session
 
 pages_app = Blueprint('pages_app', __name__)
 from models import Request, Result, ReportTypeEnum
-from app import db
+from app import db, app
 from ln2sql import Ln2sql
 
 
-def translate(request):
+def translate(user_request):
     ln2sql = Ln2sql(
-        language_path="/home/user/work/ln2sql3/ln2sql/lang_store/english.csv",
-        database_connection_string="Add a connection string",
+        language_path=os.path.join(app.config['LANG_STORE_PATH'], "english.csv"),
+        database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
         # stopwords_path=args.stopwords,
-    ).get_query("What servers name exists?")
+    ).get_query(user_request)
     return ln2sql
 
 
@@ -90,9 +91,9 @@ def api_request():
     results = []
     t = []
     try:
-        t = translate("")
-    except:
-        pass
+        t = translate(request_text)
+    except Exception as ex:
+        print("Translation failed: %s" % str(ex))
 
     # for r in t:
     if isinstance(t, str):

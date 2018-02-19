@@ -34,7 +34,7 @@ class PgDatabaseHelper:
         return [{'schema': row[0], 'name': row[1]} for row in rows]
 
     def get_columns(self, schema_name, table_name):
-        query = """SELECT c.name, c.type FROM {0:s}.columns AS c JOIN {0:s}.tables AS t ON t.id = c.table_id 
+        query = """SELECT c.name, c.data_type FROM {0:s}.columns AS c JOIN {0:s}.tables AS t ON t.id = c.table_id
             WHERE t.schema = '{1:s}' AND t.name = '{2:s}'
             ORDER BY name ASC""".format(self._schema, schema_name, table_name)
         rows = self._get_rows(query)
