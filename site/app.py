@@ -38,7 +38,7 @@ def get_tables(pg_cur):
     return pg_cur.fetchall()
 
 
-def get_columns(pg_cur, tables_names):
+def get_columns(pg_cur):
     pg_cur.execute("""
     SELECT table_schema, table_name, column_name, data_type, ordinal_position
     FROM INFORMATION_SCHEMA.COLUMNS
@@ -47,6 +47,27 @@ def get_columns(pg_cur, tables_names):
     """)
     return pg_cur.fetchall()
 
+def get_foreign_keys(pg_cur):
+    pg_cur.execute("""
+    WITH db_foreign_keys AS
+    (
+        SELECT
+            tc.table_schema AS table_schema, tc.table_name AS table_name, kcu.column_name AS column_name,
+            ccu.table_schema AS foreign_table_schema, ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name,
+            MAX(kcu.position_in_unique_constraint) OVER (PARTITION BY kcu.constraint_name, kcu.table_schema, kcu.table_name) AS columns_in_fk
+        FROM
+            information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu USING (constraint_name, table_schema, table_name)
+            JOIN information_schema.constraint_column_usage AS ccu USING (constraint_name)
+        WHERE
+            tc.constraint_type = 'FOREIGN KEY'
+    )
+
+    SELECT DISTINCT table_schema, table_name, column_name, foreign_table_schema, foreign_table_name, foreign_column_name
+    FROM db_foreign_keys
+    WHERE columns_in_fk = 1;  -- no multicolumn FKs
+    """)
+    return pg_cur.fetchall()
 
 def index_work_db(config, db):
     from models import Table, Column
@@ -78,7 +99,7 @@ def index_work_db(config, db):
 
     # find columns
     tables_names = [table.name for table in tables]
-    rows = get_columns(cur, tables_names)
+    rows = get_columns(cur)
     columns = []
     for row in rows:
         table = next((t for t in tables if t.schema == row[0] and t.name == row[1]), None)

@@ -46,9 +46,12 @@ class PgDatabaseHelper:
         return [row[0] for row in rows]
 
     def get_foreign_keys(self):
-        query = """SELECT table_schema, table_name, column_name, 
-                foreign_table_schema, foreign_table_name, foreign_column_name
-                FROM foreign_keys;"""
+        query = """SELECT t.schema, t.name, c.name, ft.schema, ft.name, fc.name
+            FROM foreign_keys AS fk
+            JOIN columns AS c ON (fk.column_id = c.id)
+            JOIN tables AS t ON (c.table_id = t.id)
+            JOIN columns AS fc ON (fk.foreign_column_id = fc.id)
+            JOIN tables AS ft ON (fc.table_id = ft.id);"""
         rows = self._get_rows(query)
         return [{'table_schema': row[0], 'table_name': row[1], 'column_name': row[2],
                  'foreign_table_schema': row[3], 'foreign_table_name': row[4], 'foreign_column_name': row[5]}

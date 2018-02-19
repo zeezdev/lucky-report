@@ -127,19 +127,12 @@ class Column(Base):
 # class ForeignKey(db.Model):
 #     __tablename__ = "foreign_keys"
 #     __table_args__ = (
-#         UniqueConstraint('table_schema', 'table_name',
-#                          'column_name', 'foreign_table_schema',
-#                          'foreign_table_name', 'foreign_column_name'),
+#         UniqueConstraint('column_id', 'foreign_column_id'),
 #     )
 #
 #     id = Cl(BigInteger, primary_key=True)
-#     table_schema = Cl(Text),
-#
-#     table_name = Cl(Text),
-#     column_name = Cl(Text),
-#     foreign_table_schema = Cl(Text),
-#     foreign_table_name = Cl(Text),
-#     foreign_column_name = Cl(Text)
+#     column_id = Cl(BigInteger, ForeignKey("columns.id")),
+#     foreign_column_id = Cl(BigInteger, ForeignKey("columns.id"))
 #
 #     def __str__(self):
 #         return ""
