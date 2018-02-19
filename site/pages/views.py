@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, jsonify
 # from flask_sqlalchemy_session import current_session
 
 pages_app = Blueprint('pages_app', __name__)
-from models import Request, Result, ReportTypeEnum
+from models import Request, Result, ReportTypeEnum, ForeignKey, Column, Table
 from app import db, app
 from ln2sql import Ln2sql
 

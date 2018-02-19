@@ -7,6 +7,7 @@ os.environ['RUN_MIGRATION'] = '1'  # little hack for disable backer session
 
 
 from app import app, db
+from models import *
 
 
 app.config.from_object(os.environ.get('APP_SETTINGS', 'settings.DevelopmentConfig'))
