@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from flask.sessions import SessionInterface
 from beaker.middleware import SessionMiddleware
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 # from sqlalchemy import create_engine
 # from sqlalchemy.orm import sessionmaker
 # from flask_sqlalchemy_session import flask_scoped_session
@@ -59,12 +59,15 @@ def get_foreign_keys(pg_cur):
     (
         SELECT
             tc.constraint_name AS fk_name,
+            
             tc.table_schema AS table_schema, 
             tc.table_name AS table_name, 
-            -- kcu.column_name AS column_name,
+            kcu.column_name AS column_name,
+            
             ccu.table_schema AS foreign_table_schema, 
             ccu.table_name AS foreign_table_name, 
             ccu.column_name AS foreign_column_name,
+            
             MAX(kcu.position_in_unique_constraint) OVER (PARTITION BY kcu.constraint_name, kcu.table_schema, kcu.table_name) AS columns_in_fk
         FROM
             information_schema.table_constraints AS tc
@@ -74,7 +77,7 @@ def get_foreign_keys(pg_cur):
             tc.constraint_type = 'FOREIGN KEY'
     )
 
-    SELECT DISTINCT fk_name, table_schema, table_name, foreign_table_schema, foreign_table_name, foreign_column_name
+    SELECT DISTINCT fk_name, table_schema, table_name, column_name, foreign_table_schema, foreign_table_name, foreign_column_name
     FROM db_foreign_keys
     WHERE columns_in_fk = 1;  -- no multicolumn FKs
     """)
@@ -84,7 +87,9 @@ def get_foreign_keys(pg_cur):
 def index_work_db(config, db):
     from models import Table, Column, ForeignKey
     import psycopg2
-    # return
+
+    if int(os.environ.get('RUN_MIGRATION', 0)) != 0:
+        return  # FIXME: dirty hack for migration!
 
     # clear old data
     db.session.query(ForeignKey).filter().delete()
@@ -130,8 +135,9 @@ def index_work_db(config, db):
     fks = []
     # name, table_schema, table_name, column_name, foreign_table_schema, foreign_table_name, foreign_column_name
     for row in rows:
+        print("fk: %s" % str(row))
         column = next((c for c in columns if c.table.schema == row[1] and c.table.name == row[2]), None)
-        foreign_colum = next((c for c in columns if c.table.schema == row[3] and c.table.name == row[4]), None)
+        foreign_colum = next((c for c in columns if c.table.schema == row[4] and c.table.name == row[5]), None)
         if column is not None and foreign_colum is not None:
             fk = ForeignKey(
                 name=row[0],
@@ -145,7 +151,6 @@ def index_work_db(config, db):
                 print("Error: %s" % str(ex))
     rows = None
     del rows
-
 
 
 app = Flask(__name__)
@@ -162,7 +167,6 @@ if int(os.environ.get('RUN_MIGRATION', 0)) == 0:
 
 # SQLAlchemy
 db = SQLAlchemy(app)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # if int(os.environ.get('RUN_MIGRATION', 0)) == 0:
 index_work_db(app.config, db)

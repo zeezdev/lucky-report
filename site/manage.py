@@ -1,13 +1,13 @@
 import os
-from flask.ext.script import Manager
-from flask.ext.migrate import Migrate, MigrateCommand
+from flask_script import Manager
+from flask_migrate import Migrate, MigrateCommand
 
 
 os.environ['RUN_MIGRATION'] = '1'  # little hack for disable backer session
 
 
 from app import app, db
-from models import *
+# from models import *
 
 
 app.config.from_object(os.environ.get('APP_SETTINGS', 'settings.DevelopmentConfig'))

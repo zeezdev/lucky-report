@@ -1,14 +1,18 @@
 import enum
-# from app import db
+import os
+
 from sqlalchemy import Index, text, UniqueConstraint, Column as Cl, BigInteger, Text, DateTime, ForeignKey as Fk, Float, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.functions import now
 
 
-
-Base = declarative_base()
-# Base = db.Model  # use for migrate
+if int(os.environ.get('RUN_MIGRATION', 0)) != 0:
+    # FIXME: dirty hack for migration!
+    from app import db
+    Base = db.Model  # use for migrate
+else:
+    Base = declarative_base()
 
 
 class Request(Base):
@@ -41,6 +45,7 @@ class ReportTypeEnum(enum.Enum):
     table = 1
     graph = 2
     chart = 3
+
 
 ReportTypeEnum2int = {
     ReportTypeEnum.table: 1,
@@ -85,9 +90,9 @@ class Table(Base):
     __tablename__ = "tables"
     __table_args__ = (
         UniqueConstraint('schema', 'name', name="_schema_name_uc"),
-        # Index('table_name_trgm_index',
-        #       text('name gist_trgm_ops'),
-        #       postgresql_using="gist")
+        Index('table_name_trgm_index',
+              text('name gist_trgm_ops'),
+              postgresql_using="gist")
     )
 
     id = Cl(BigInteger, primary_key=True)
@@ -130,7 +135,7 @@ class Column(Base):
 class ForeignKey(Base):
     __tablename__ = "foreign_keys"
     __table_args__ = (
-        UniqueConstraint('column_id', 'foreign_column_id'),
+        UniqueConstraint('name', 'column_id', 'foreign_column_id'),
     )
 
     id = Cl(BigInteger, primary_key=True)
