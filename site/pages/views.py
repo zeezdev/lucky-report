@@ -14,7 +14,7 @@ def translate(user_request):
         database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
-        # stopwords_path=args.stopwords,
+        stopwords_path=os.path.join(app.config['LANG_STORE_PATH'], "..", "stopwords", "english.txt"),
     ).get_query(user_request)
     return ln2sql
 
@@ -95,31 +95,19 @@ def api_request():
     except Exception as ex:
         print("Translation failed: %s" % str(ex))
 
-    # for r in t:
-    if isinstance(t, str):
-        results.append(Result(request_obj.id,
-                              t,
-                              1.000, ReportTypeEnum.table))
-    else:
-        for r in t:
+    if t and isinstance(t, str):
+        t = t.strip().replace('\n', ' ').replace('[1m', '').replace('[0m', '').replace('OOV', "'OOV' OR 1 = 1")
+        t = t.split(';')
+
+    for r in t:
+        if r:
             results.append(Result(request_obj.id,
                                   r,
                                   1.000, ReportTypeEnum.table))
 
-
-    # results.append(Result(request_obj.id,
-    #                  "SELECT server_id, name, server_type FROM servers WHERE name LIKE 'a*'",
-    #                  1.000, ReportTypeEnum.table))
-    # results.append(Result(request_obj.id,
-    #                  "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type",
-    #                  0.900, ReportTypeEnum.chart))
-    # results.append(Result(request_obj.id,
-    #                  "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type ORDER BY s.server_name",
-    #                  0.540, ReportTypeEnum.graph))
     for r in results:
         db.session.add(r)
     db.session.commit()
-
 
     return jsonify(result)
 
