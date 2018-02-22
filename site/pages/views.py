@@ -165,6 +165,10 @@ def api_result_detail(result_id):
     try:
         result_obj = db.session.query(Result).filter_by(id=int(result_id)).first()
         result['result'] = result_obj.to_dict()
+        result['ok'] = 1
+
+        result['data'] = None
+        # TODO:execute query on working DB
     except Exception as ex:
         print("Error: %s" % str(ex))
         return jsonify({'ok': 0, 'error': "server error"})

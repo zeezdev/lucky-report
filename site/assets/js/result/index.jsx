@@ -12,6 +12,8 @@ var resultId = parseInt(e.dataset.id);
 
 
 ReactDOM.render(
-    <ResultApp />,
+    <ResultApp
+        resultId={resultId}
+    />,
     document.getElementById('result')
 );

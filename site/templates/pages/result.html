@@ -5,9 +5,13 @@
 {% block content %}
   <input type="hidden" id="result-id" data-id="{{ result_id }}"/>
   <div id="result"></div>
+  <div id="donutchart" style="width: 900px; height: 500px;"></div>
 {% endblock %}
 
 
 {% block extrajs %}
+  <!--<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>-->
+  <!--<script src="https://unpkg.com/react-google-charts@1.4.0/umd/react-google-charts.min.js" />-->
   <script src="{{ url_for('static', filename='bundles/result.js') }}"></script>
+
 {% endblock %}
