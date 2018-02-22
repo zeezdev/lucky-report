@@ -748,54 +748,11 @@ class Parser:
             sentence = stopwordsFilter.filter(sentence)
 
         input_for_finding_value = sentence.rstrip(string.punctuation.replace('"', '').replace("'", ""))
-        columns_of_values_of_where = []
 
         filter_list = [",", "!"]
 
         for filter_element in filter_list:
             input_for_finding_value = input_for_finding_value.replace(filter_element, " ")
-
-        input_word_list = input_for_finding_value.split()
-
-        number_of_where_column_temp = 0
-        number_of_table_temp = 0
-        last_table_position_temp = 0
-        start_phrase = ''
-        med_phrase = ''
-
-        # TODO: merge this part of the algorithm (detection of values of where)
-        #  in the rest of the parsing algorithm (about line 725) '''
-
-        for i in range(0, len(input_word_list)):
-            similar_tables = self.database_object.get_similar_tables(input_word_list[i])
-            if len(similar_tables) > 0:
-                for table in similar_tables:
-                    if number_of_table_temp == 0:
-                        start_phrase = input_word_list[:i]
-                    number_of_table_temp += 1
-                    last_table_position_temp = i
-
-                    # Should where should be next to table?
-                    column_to_find = input_word_list[i + 1] if len(input_word_list) > (i + 1) else input_word_list[i]
-                    columns = self.database_object.get_similar_columns(column_to_find, table['schema'], table['name'])
-                    if len(columns) > 0:
-                        if number_of_where_column_temp == 0:
-                            med_phrase = input_word_list[len(start_phrase):last_table_position_temp + 1]
-                        number_of_where_column_temp += 1
-                        break
-                    else:
-                        if (number_of_table_temp != 0) and (number_of_where_column_temp == 0) and (
-                                    i == (len(input_word_list) - 1)):
-                            med_phrase = input_word_list[len(start_phrase):]
-            else:
-                continue
-            break
-
-        end_phrase = input_word_list[len(start_phrase) + len(med_phrase):]
-
-        ''' @todo set this part of the algorithm (detection of values of where) in the WhereParser thread '''
-        columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(end_phrase))
-        ''' ----------------------------------------------------------------------------------------------------------- '''
 
         select_phrase = ''
         from_phrase = ''
@@ -838,6 +795,9 @@ class Parser:
                                 from_phrase = words[len(select_phrase):]
 
         where_phrase = words[len(select_phrase) + len(from_phrase):]
+        ''' @todo set this part of the algorithm (detection of values of where) in the WhereParser thread '''
+        columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(where_phrase))
+        ''' ----------------------------------------------------------------------------------------------------------- '''
 
         if (number_of_select_column + number_of_table + number_of_where_column) == 0:
             raise ParsingException("No keyword found in sentence!")
