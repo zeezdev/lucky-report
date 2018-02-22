@@ -1,4 +1,5 @@
 import os
+import random
 from flask import Blueprint, render_template, request, jsonify
 # from flask_sqlalchemy_session import current_session
 
@@ -14,7 +15,7 @@ def translate(user_request):
         database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
-        stopwords_path=os.path.join(app.config['LANG_STORE_PATH'], "..", "stopwords", "english.txt"),
+        # stopwords_path=os.path.join(app.config['LANG_STORE_PATH'], "..", "stopwords", "english.txt"),
     ).get_query(user_request)
     return ln2sql
 
@@ -26,8 +27,10 @@ def index():
     request_id = request.values.get('request_id')
     if request_id is not None:
         request_id = int(request_id)
+        request_obj = db.session.query(Request).filter_by(id=request_id).first()
         # TODO: find in DB
         context['request_id'] = request_id
+        context['request_text'] = request_obj.request
 
     # try:
     #     ses_key = session['value']
@@ -57,6 +60,10 @@ def result():
     }
     print("id=%s" % result_id)
     return render_template('pages/result.html', **context)
+
+
+def resolve_report_type(sql):
+    return random.choice(list(ReportTypeEnum))
 
 
 # API
@@ -103,7 +110,8 @@ def api_request():
         if r:
             results.append(Result(request_obj.id,
                                   r,
-                                  1.000, ReportTypeEnum.table))
+                                  1.000,
+                                  resolve_report_type(r)))
 
     for r in results:
         db.session.add(r)

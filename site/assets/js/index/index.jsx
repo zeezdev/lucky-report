@@ -9,11 +9,13 @@ var IndexApp = require('./app')
 
 var e = document.getElementById('request-id');
 var requestId = e.dataset.requestId;
+var requestText = e.dataset.requestText;
 
 
 ReactDOM.render(
     <IndexApp 
     	requestId={requestId}
+    	requestText={requestText}
     />,
     document.getElementById('index-id')
 );
