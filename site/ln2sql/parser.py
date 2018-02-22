@@ -55,7 +55,6 @@ class SelectParser(Thread):
     def run(self):
         for table_of_from in self.tables_of_from:  # for each query
             self.select_object = Select()
-            is_count = False
             self.columns_of_select = self.uniquify(self.columns_of_select)
             number_of_select_column = len(self.columns_of_select)
 
@@ -76,8 +75,7 @@ class SelectParser(Thread):
 
                 for i in range(0, len(self.phrase)):
                     for column_name in self.columns_of_select:
-                        if (self.phrase[i] == column_name) or (
-                                    self.phrase[i] in self.database_object.get_column_with_this_name(column_name).equivalences):
+                        if self.database_object.get_max_word_similarity(self.phrase[i], column_name):
                             select_phrases.append(self.phrase[previous_index:i + 1])
                             previous_index = i + 1
 
@@ -819,19 +817,20 @@ class Parser:
                     last_table_position = i
 
                     # Should where should be next to table?
+                    for word in words[:i]:
+                        similar_columns = self.database_object.get_similar_columns(word, table['schema'], table['name'])
+                        if len(similar_columns) > 0:
+                            columns_of_select.append(similar_columns[0])
+                            number_of_select_column += 1
                     column_to_find = words[i + 1] if len(words) > (i + 1) else words[i]
                     columns = self.database_object.get_similar_columns(column_to_find, table['schema'], table['name'])
                     if len(columns) > 0:
                         for column in columns:
-                            if number_of_table == 0:
-                                columns_of_select.append(column)
-                                number_of_select_column += 1
-                            else:
-                                if number_of_where_column == 0:
-                                    from_phrase = words[len(select_phrase):last_table_position + 1]
-                                if column not in columns_of_where:  # why do we need duplicates?
-                                    columns_of_where.append(column)
-                                    number_of_where_column += 1
+                            if number_of_where_column == 0:
+                                from_phrase = words[len(select_phrase):last_table_position + 1]
+                            if column not in columns_of_where:  # why do we need duplicates?
+                                columns_of_where.append(column)
+                                number_of_where_column += 1
                             break  # TODO: why break?
                         else:
                             if (number_of_table != 0) and (number_of_where_column == 0) and (i == (len(words) - 1)):
