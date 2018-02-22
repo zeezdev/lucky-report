@@ -733,6 +733,125 @@ class Parser:
                         columns_of_values_of_where.append(str("'" + str(irext_list[index]).replace('<_>', ' ') + "'"))
         return columns_of_values_of_where
 
+    def adjust_where_phrase(self, tables_of_from, from_phrase, where_phrase):
+        if len(tables_of_from) > 0:
+            from_phrases = []
+            previous_index = 0
+            tables_of_from_as_text = ' '.join([full_table_name.split('.')[-1] for full_table_name in tables_of_from])
+            for i in range(0, len(from_phrase)):
+                max_similarity = self.database_object.get_max_word_similarity(from_phrase[i], tables_of_from_as_text)
+                if max_similarity >= MIN_WORD_SIMILARITY:
+                    from_phrases.append(from_phrase[previous_index:i + 1])
+                    previous_index = i + 1
+
+            last_junction_word_index = -1
+
+            for i in range(0, len(from_phrases)):
+                number_of_junction_words = 0
+                number_of_disjunction_words = 0
+
+                for word in from_phrases[i]:
+                    if word in self.junction_keywords:
+                        number_of_junction_words += 1
+                    if word in self.disjunction_keywords:
+                        number_of_disjunction_words += 1
+
+                if (number_of_junction_words + number_of_disjunction_words) > 0:
+                    last_junction_word_index = i
+
+            if last_junction_word_index == -1:
+                where_phrase = sum(from_phrases[1:], []) + where_phrase
+            else:
+                where_phrase = sum(from_phrases[last_junction_word_index + 1:], []) + where_phrase
+        return where_phrase
+
+    def get_other_clauses(self, where_phrase):
+        group_by_phrase = []
+        order_by_phrase = []
+        new_where_phrase = []
+        previous_index = 0
+        previous_phrase_type = 0
+        yet_where = 0
+
+        for i in range(0, len(where_phrase)):
+            if where_phrase[i] in self.order_by_keywords:
+                if yet_where > 0:
+                    if previous_phrase_type == 1:
+                        order_by_phrase.append(where_phrase[previous_index:i])
+                    elif previous_phrase_type == 2:
+                        group_by_phrase.append(where_phrase[previous_index:i])
+                else:
+                    new_where_phrase.append(where_phrase[previous_index:i])
+                previous_index = i
+                previous_phrase_type = 1
+                yet_where += 1
+            if where_phrase[i] in self.group_by_keywords:
+                if yet_where > 0:
+                    if previous_phrase_type == 1:
+                        order_by_phrase.append(where_phrase[previous_index:i])
+                    elif previous_phrase_type == 2:
+                        group_by_phrase.append(where_phrase[previous_index:i])
+                else:
+                    new_where_phrase.append(where_phrase[previous_index:i])
+                previous_index = i
+                previous_phrase_type = 2
+                yet_where += 1
+
+        if previous_phrase_type == 1:
+            order_by_phrase.append(where_phrase[previous_index:])
+        elif previous_phrase_type == 2:
+            group_by_phrase.append(where_phrase[previous_index:])
+        else:
+            new_where_phrase.append(where_phrase)
+
+        return {'where_phrase': new_where_phrase, 'order_by_phrase': order_by_phrase, 'group_by_phrase': group_by_phrase}
+
+    def get_queries(self, tables_of_from, select_phrase, columns_of_select, columns_of_where, columns_of_values_of_where, new_where_phrase, group_by_phrase, order_by_phrase):
+        try:
+            select_parser = SelectParser(columns_of_select, tables_of_from, select_phrase, self.count_keywords,
+                                         self.sum_keywords, self.average_keywords, self.max_keywords, self.min_keywords,
+                                         self.distinct_keywords, self.database_dico, self.database_object)
+            from_parser = FromParser(tables_of_from, columns_of_select, columns_of_where, self.database_object)
+            where_parser = WhereParser(new_where_phrase, tables_of_from, columns_of_where, columns_of_values_of_where,
+                                       self.count_keywords, self.sum_keywords, self.average_keywords, self.max_keywords,
+                                       self.min_keywords, self.greater_keywords, self.less_keywords,
+                                       self.between_keywords, self.negation_keywords, self.junction_keywords,
+                                       self.disjunction_keywords, self.like_keywords, self.distinct_keywords,
+                                       self.database_dico, self.database_object)
+            group_by_parser = GroupByParser(group_by_phrase, tables_of_from, self.database_dico, self.database_object)
+            order_by_parser = OrderByParser(order_by_phrase, tables_of_from, self.asc_keywords, self.desc_keywords,
+                                            self.database_dico, self.database_object)
+
+            select_parser.start()
+            from_parser.start()
+            where_parser.start()
+            group_by_parser.start()
+            order_by_parser.start()
+
+            queries = from_parser.join()
+        except:
+            raise ParsingException("Parsing error occured in thread!")
+
+        if isinstance(queries, ParsingException):
+            raise queries
+
+        try:
+            select_objects = select_parser.join()
+            where_objects = where_parser.join()
+            group_by_objects = group_by_parser.join()
+            order_by_objects = order_by_parser.join()
+        except:
+            raise ParsingException("Parsing error occured in thread!")
+
+        for i in range(0, len(queries)):
+            query = queries[i]
+            query.set_select(select_objects[i])
+            query.set_where(where_objects[i])
+            query.set_group_by(group_by_objects[i])
+            query.set_order_by(order_by_objects[i])
+
+        return queries
+
     def parse_sentence(self, sentence, stopwordsFilter=None):
         sys.tracebacklimit = 0  # Remove traceback from Exception
 
@@ -802,120 +921,17 @@ class Parser:
         if (number_of_select_column + number_of_table + number_of_where_column) == 0:
             raise ParsingException("No keyword found in sentence!")
 
-        if len(tables_of_from) > 0:
-            from_phrases = []
-            previous_index = 0
-            tables_of_from_as_text = ' '.join([full_table_name.split('.')[-1] for full_table_name in tables_of_from])
-            for i in range(0, len(from_phrase)):
-                max_similarity = self.database_object.get_max_word_similarity(from_phrase[i], tables_of_from_as_text)
-                if max_similarity >= MIN_WORD_SIMILARITY:
-                    from_phrases.append(from_phrase[previous_index:i + 1])
-                    previous_index = i + 1
-
-            last_junction_word_index = -1
-
-            for i in range(0, len(from_phrases)):
-                number_of_junction_words = 0
-                number_of_disjunction_words = 0
-
-                for word in from_phrases[i]:
-                    if word in self.junction_keywords:
-                        number_of_junction_words += 1
-                    if word in self.disjunction_keywords:
-                        number_of_disjunction_words += 1
-
-                if (number_of_junction_words + number_of_disjunction_words) > 0:
-                    last_junction_word_index = i
-
-            if last_junction_word_index == -1:
-                from_phrase = sum(from_phrases[:1], [])
-                where_phrase = sum(from_phrases[1:], []) + where_phrase
-            else:
-                from_phrase = sum(from_phrases[:last_junction_word_index + 1], [])
-                where_phrase = sum(from_phrases[last_junction_word_index + 1:], []) + where_phrase
+        where_phrase = self.adjust_where_phrase(tables_of_from, from_phrase, where_phrase)
 
         if len(tables_of_from) == 0:
             raise ParsingException("No table name found in sentence!")
 
-        group_by_phrase = []
-        order_by_phrase = []
-        new_where_phrase = []
-        previous_index = 0
-        previous_phrase_type = 0
-        yet_where = 0
+        other_phrases = self.get_other_clauses(where_phrase)
+        new_where_phrase = other_phrases['where_phrase']
+        group_by_phrase = other_phrases['group_by_phrase']
+        order_by_phrase = other_phrases['order_by_phrase']
 
-        for i in range(0, len(where_phrase)):
-            if where_phrase[i] in self.order_by_keywords:
-                if yet_where > 0:
-                    if previous_phrase_type == 1:
-                        order_by_phrase.append(where_phrase[previous_index:i])
-                    elif previous_phrase_type == 2:
-                        group_by_phrase.append(where_phrase[previous_index:i])
-                else:
-                    new_where_phrase.append(where_phrase[previous_index:i])
-                previous_index = i
-                previous_phrase_type = 1
-                yet_where += 1
-            if where_phrase[i] in self.group_by_keywords:
-                if yet_where > 0:
-                    if previous_phrase_type == 1:
-                        order_by_phrase.append(where_phrase[previous_index:i])
-                    elif previous_phrase_type == 2:
-                        group_by_phrase.append(where_phrase[previous_index:i])
-                else:
-                    new_where_phrase.append(where_phrase[previous_index:i])
-                previous_index = i
-                previous_phrase_type = 2
-                yet_where += 1
-
-        if previous_phrase_type == 1:
-            order_by_phrase.append(where_phrase[previous_index:])
-        elif previous_phrase_type == 2:
-            group_by_phrase.append(where_phrase[previous_index:])
-        else:
-            new_where_phrase.append(where_phrase)
-
-        try:
-            select_parser = SelectParser(columns_of_select, tables_of_from, select_phrase, self.count_keywords,
-                                         self.sum_keywords, self.average_keywords, self.max_keywords, self.min_keywords,
-                                         self.distinct_keywords, self.database_dico, self.database_object)
-            from_parser = FromParser(tables_of_from, columns_of_select, columns_of_where, self.database_object)
-            where_parser = WhereParser(new_where_phrase, tables_of_from, columns_of_where, columns_of_values_of_where,
-                                       self.count_keywords, self.sum_keywords, self.average_keywords, self.max_keywords,
-                                       self.min_keywords, self.greater_keywords, self.less_keywords,
-                                       self.between_keywords, self.negation_keywords, self.junction_keywords,
-                                       self.disjunction_keywords, self.like_keywords, self.distinct_keywords,
-                                       self.database_dico, self.database_object)
-            group_by_parser = GroupByParser(group_by_phrase, tables_of_from, self.database_dico, self.database_object)
-            order_by_parser = OrderByParser(order_by_phrase, tables_of_from, self.asc_keywords, self.desc_keywords,
-                                            self.database_dico, self.database_object)
-
-            select_parser.start()
-            from_parser.start()
-            where_parser.start()
-            group_by_parser.start()
-            order_by_parser.start()
-
-            queries = from_parser.join()
-        except:
-            raise ParsingException("Parsing error occured in thread!")
-
-        if isinstance(queries, ParsingException):
-            raise queries
-
-        try:
-            select_objects = select_parser.join()
-            where_objects = where_parser.join()
-            group_by_objects = group_by_parser.join()
-            order_by_objects = order_by_parser.join()
-        except:
-            raise ParsingException("Parsing error occured in thread!")
-
-        for i in range(0, len(queries)):
-            query = queries[i]
-            query.set_select(select_objects[i])
-            query.set_where(where_objects[i])
-            query.set_group_by(group_by_objects[i])
-            query.set_order_by(order_by_objects[i])
+        queries = self.get_queries(tables_of_from, select_phrase, columns_of_select, columns_of_where,
+                                   columns_of_values_of_where, new_where_phrase, group_by_phrase, order_by_phrase)
 
         return [query for query in queries if not query.get_corrupted()]
