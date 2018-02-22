@@ -855,12 +855,6 @@ class Parser:
     def parse_sentence(self, sentence, stopwordsFilter=None):
         sys.tracebacklimit = 0  # Remove traceback from Exception
 
-        number_of_table = 0
-        number_of_select_column = 0
-        number_of_where_column = 0
-        columns_of_select = []
-        columns_of_where = []
-
         stopwordsFilter = self.adjust_stopwords(stopwordsFilter)
 
         if stopwordsFilter is not None:
@@ -873,65 +867,56 @@ class Parser:
         for filter_element in filter_list:
             input_for_finding_value = input_for_finding_value.replace(filter_element, " ")
 
-        select_phrase = ''
-        from_phrase = ''
-
         words = re.findall(r"[\w]+", self.remove_accents(sentence))
 
-        unique_tables_of_from = set()
-        tables_of_from = []  # ~ ordered set
+        parser_data_sets = []
         for i in range(0, len(words)):
+            select_phrase = words[:i]
+            from_phrase = words[i]
+            where_phrase = words[i:]
             similar_tables = self.database_object.get_similar_tables(words[i])
+            tables_of_from = set()
+            columns_of_select = set()
+            column_of_where = set()
             if len(similar_tables) > 0:
                 for table in similar_tables:
-                    if number_of_table == 0:
-                        select_phrase = words[:i]
-                    table_name = table['schema'] + '.' + table['name']
-                    if table_name not in unique_tables_of_from:
-                        unique_tables_of_from.add(table_name)
-                        tables_of_from.append(table_name)
-                        number_of_table += 1
-                    last_table_position = i
-
-                    # Should where should be next to table?
-                    for word in words[:i]:
+                    for word in select_phrase:
                         similar_columns = self.database_object.get_similar_columns(word, table['schema'], table['name'])
                         if len(similar_columns) > 0:
-                            columns_of_select.append(similar_columns[0])
-                            number_of_select_column += 1
-                    column_to_find = words[i + 1] if len(words) > (i + 1) else words[i]
-                    columns = self.database_object.get_similar_columns(column_to_find, table['schema'], table['name'])
-                    if len(columns) > 0:
-                        for column in columns:
-                            if number_of_where_column == 0:
-                                from_phrase = words[len(select_phrase):last_table_position + 1]
-                            if column not in columns_of_where:  # why do we need duplicates?
-                                columns_of_where.append(column)
-                                number_of_where_column += 1
-                            break  # TODO: why break?
-                        else:
-                            if (number_of_table != 0) and (number_of_where_column == 0) and (i == (len(words) - 1)):
-                                from_phrase = words[len(select_phrase):]
+                            columns_of_select.add(similar_columns[0])
+                    for word in where_phrase:
+                        similar_columns = self.database_object.get_similar_columns(word, table['schema'], table['name'])
+                        if len(similar_columns) > 0:
+                            column_of_where.add(similar_columns[0])
+                    tables_of_from.add(table['schema'] + '.' + table['name'])
+            else:
+                pass  # find by where
 
-        where_phrase = words[len(select_phrase) + len(from_phrase):]
-        ''' @todo set this part of the algorithm (detection of values of where) in the WhereParser thread '''
-        columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(where_phrase))
-        ''' ----------------------------------------------------------------------------------------------------------- '''
+            if len(tables_of_from) > 0:
+                where_phrase = self.adjust_where_phrase(tables_of_from, from_phrase, where_phrase)
+                columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(where_phrase))
+                parser_data_sets.append({'select_phrase': select_phrase, 'columns_of_select': list(columns_of_select),
+                                         'tables_of_from': list(tables_of_from), 'from_phrase': from_phrase,
+                                         'where_values': columns_of_values_of_where,
+                                         'columns_of_where': list(column_of_where), 'where_phrase': where_phrase})
 
-        if (number_of_select_column + number_of_table + number_of_where_column) == 0:
+        if len(parser_data_sets) == 0:
             raise ParsingException("No keyword found in sentence!")
 
-        where_phrase = self.adjust_where_phrase(tables_of_from, from_phrase, where_phrase)
+        queries = []
 
-        if len(tables_of_from) == 0:
-            raise ParsingException("No table name found in sentence!")
+        for asset in parser_data_sets:
+            other_phrases = self.get_other_clauses(asset['where_phrase'])
+            new_where_phrase = other_phrases['where_phrase']
+            group_by_phrase = other_phrases['group_by_phrase']
+            order_by_phrase = other_phrases['order_by_phrase']
+            columns_of_where = asset['columns_of_where']
+            columns_of_select = asset['columns_of_select']
+            tables_of_from = asset['tables_of_from']
+            columns_of_values_of_where = asset['where_values']
+            select_phrase = asset['select_phrase']
 
-        other_phrases = self.get_other_clauses(where_phrase)
-        new_where_phrase = other_phrases['where_phrase']
-        group_by_phrase = other_phrases['group_by_phrase']
-        order_by_phrase = other_phrases['order_by_phrase']
-
-        queries = self.get_queries(tables_of_from, select_phrase, columns_of_select, columns_of_where,
-                                   columns_of_values_of_where, new_where_phrase, group_by_phrase, order_by_phrase)
+            queries += self.get_queries(tables_of_from, select_phrase, columns_of_select, columns_of_where,
+                                        columns_of_values_of_where, new_where_phrase, group_by_phrase, order_by_phrase)
 
         return [query for query in queries if not query.get_corrupted()]
