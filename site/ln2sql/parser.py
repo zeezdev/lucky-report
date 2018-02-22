@@ -673,6 +673,65 @@ class Parser:
                 stopwords.remove_stopword(word)
         return stopwords
 
+    def get_columns_of_values_of_where(self, irext):
+        columns_of_values_of_where = []
+        if irext:
+            irext = self.remove_accents(irext.lower())
+
+            filter_list = [",", "!"]
+
+            for filter_element in filter_list:
+                irext = irext.replace(filter_element, " ")
+
+            assignment_list = self.equal_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords
+            # As these words can also be part of assigners
+
+            # custom operators added as they can be possibilities
+            assignment_list.append(':')
+            assignment_list.append('=')
+
+            # Algorithmic logic for best substitution for extraction of values with the help of assigners.
+            assignment_list = self.transformation_sort(assignment_list)
+
+            maverickjoy_general_assigner = "*res*@3#>>*"
+            maverickjoy_like_assigner = "*like*@3#>>*"
+
+            for idx, assigner in enumerate(assignment_list):
+                if assigner in self.like_keywords:
+                    assigner = str(" " + assigner + " ")
+                    irext = irext.replace(assigner, str(" " + maverickjoy_like_assigner + " "))
+                else:
+                    assigner = str(" " + assigner + " ")
+                    # Reason for adding " " these is according to the LOGIC implemented assigner operators help us extract the value,
+                    # hence they should be independent entities not part of some other big entity else logic will fail.
+                    # for eg -> "show data for city where cityName where I like to risk my life  is Pune" will end up extacting ,
+                    # 'k' and '1' both. I know its a lame sentence but something like this could be a problem.
+
+                    irext = irext.replace(assigner, str(" " + maverickjoy_general_assigner + " "))
+
+            # replace all spaces from values to <_> for proper value assignment in SQL
+            # eg. (where name is 'abc def') -> (where name is abc<_>def)
+            for i in re.findall("(['\"].*?['\"])", irext):
+                irext = irext.replace(i, i.replace(' ', '<_>').replace("'", '').replace('"', ''))
+
+            irext_list = irext.split()
+
+            for idx, x in enumerate(irext_list):
+                index = idx + 1
+                if x == maverickjoy_like_assigner:
+                    if index < len(irext_list) and irext_list[index] != maverickjoy_like_assigner and irext_list[
+                        index] != \
+                            maverickjoy_general_assigner:
+                        # replace back <_> to spaces from the values assigned
+                        columns_of_values_of_where.append(str("'%" + str(irext_list[index]).replace('<_>', ' ') + "%'"))
+
+                if x == maverickjoy_general_assigner:
+                    if index < len(irext_list) and irext_list[index] != maverickjoy_like_assigner and irext_list[
+                        index] != \
+                            maverickjoy_general_assigner:
+                        # replace back <_> to spaces from the values assigned
+                        columns_of_values_of_where.append(str("'" + str(irext_list[index]).replace('<_>', ' ') + "'"))
+        return columns_of_values_of_where
 
     def parse_sentence(self, sentence, stopwordsFilter=None):
         sys.tracebacklimit = 0  # Remove traceback from Exception
@@ -680,7 +739,6 @@ class Parser:
         number_of_table = 0
         number_of_select_column = 0
         number_of_where_column = 0
-        last_table_position = 0
         columns_of_select = []
         columns_of_where = []
 
@@ -735,65 +793,8 @@ class Parser:
 
         end_phrase = input_word_list[len(start_phrase) + len(med_phrase):]
 
-        irext = ' '.join(end_phrase)
-
         ''' @todo set this part of the algorithm (detection of values of where) in the WhereParser thread '''
-
-        if irext:
-            irext = self.remove_accents(irext.lower())
-
-            filter_list = [",", "!"]
-
-            for filter_element in filter_list:
-                irext = irext.replace(filter_element, " ")
-
-            assignment_list = self.equal_keywords + self.like_keywords + self.greater_keywords + self.less_keywords + self.negation_keywords
-            # As these words can also be part of assigners
-
-            # custom operators added as they can be possibilities
-            assignment_list.append(':')
-            assignment_list.append('=')
-
-            # Algorithmic logic for best substitution for extraction of values with the help of assigners.
-            assignment_list = self.transformation_sort(assignment_list)
-
-            maverickjoy_general_assigner = "*res*@3#>>*"
-            maverickjoy_like_assigner = "*like*@3#>>*"
-
-            for idx, assigner in enumerate(assignment_list):
-                if assigner in self.like_keywords:
-                    assigner = str(" " + assigner + " ")
-                    irext = irext.replace(assigner, str(" " + maverickjoy_like_assigner + " "))
-                else:
-                    assigner = str(" " + assigner + " ")
-                    # Reason for adding " " these is according to the LOGIC implemented assigner operators help us extract the value,
-                    # hence they should be independent entities not part of some other big entity else logic will fail.
-                    # for eg -> "show data for city where cityName where I like to risk my life  is Pune" will end up extacting ,
-                    # 'k' and '1' both. I know its a lame sentence but something like this could be a problem.
-
-                    irext = irext.replace(assigner, str(" " + maverickjoy_general_assigner + " "))
-
-            # replace all spaces from values to <_> for proper value assignment in SQL
-            # eg. (where name is 'abc def') -> (where name is abc<_>def)
-            for i in re.findall("(['\"].*?['\"])", irext):
-                irext = irext.replace(i, i.replace(' ', '<_>').replace("'", '').replace('"', ''))
-
-            irext_list = irext.split()
-
-            for idx, x in enumerate(irext_list):
-                index = idx + 1
-                if x == maverickjoy_like_assigner:
-                    if index < len(irext_list) and irext_list[index] != maverickjoy_like_assigner and irext_list[index] !=\
-                            maverickjoy_general_assigner:
-                        # replace back <_> to spaces from the values assigned
-                        columns_of_values_of_where.append(str("'%" + str(irext_list[index]).replace('<_>', ' ') + "%'"))
-
-                if x == maverickjoy_general_assigner:
-                    if index < len(irext_list) and irext_list[index] != maverickjoy_like_assigner and irext_list[index] != \
-                            maverickjoy_general_assigner:
-                        # replace back <_> to spaces from the values assigned
-                        columns_of_values_of_where.append(str("'" + str(irext_list[index]).replace('<_>', ' ') + "'"))
-
+        columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(end_phrase))
         ''' ----------------------------------------------------------------------------------------------------------- '''
 
         select_phrase = ''
