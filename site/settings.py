@@ -10,13 +10,13 @@ class Config(object):
     # SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     SQLALCHEMY_DATABASE_URI = "postgresql://luckyreportuser:luckyreportuser@localhost/luckyreport"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    LANG_STORE_PATH = "/home/user/work/ln2sql3/ln2sql/lang_store/"
+    LANG_STORE_PATH = "/home/zeez/work/APPLIEDTECH/ln2sql/ln2sql/lang_store/"
 
 
     # CONNECTION STRING OF DB FOR INDEXATION
-    DBNAME = "luckyreport"
-    DBUSER = "luckyreportuser"
-    DBPASS = "luckyreportuser"
+    DBNAME = "zeezdev"
+    DBUSER = "zeezdevuser"
+    DBPASS = "88323003"
     DBHOST = "localhost"
 
 

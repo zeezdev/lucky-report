@@ -2,6 +2,7 @@ import os
 import random
 from flask import Blueprint, render_template, request, jsonify
 # from flask_sqlalchemy_session import current_session
+import psycopg2
 
 pages_app = Blueprint('pages_app', __name__)
 from models import Request, Result, ReportTypeEnum, ForeignKey, Column, Table
@@ -157,6 +158,26 @@ def api_results():
     return js
 
 
+def get_pg_connection_string(host, dbname, user, password):
+    return "host=%s dbname=%s user=%s password=%s" % (host, dbname, user, password)
+
+
+def execute_query(query):
+    pg_conn = psycopg2.connect(
+        get_pg_connection_string(
+            app.config['DBHOST'],
+            app.config['DBNAME'],
+            app.config['DBUSER'],
+            app.config['DBPASS']))
+
+    cur = pg_conn.cursor()
+    cur.execute(query)
+    columns = [column[0] for column in cur.description]
+    rows = cur.fetchall()
+    return columns, rows
+
+
+
 @pages_app.route('/api/results/<result_id>')
 def api_result_detail(result_id):
     result = {
@@ -167,7 +188,9 @@ def api_result_detail(result_id):
         result['result'] = result_obj.to_dict()
         result['ok'] = 1
 
-        result['data'] = None
+        columns, rows = execute_query(result['result']['query'])
+        result['data'] = rows
+        result['columns'] = columns
         # TODO:execute query on working DB
     except Exception as ex:
         print("Error: %s" % str(ex))
