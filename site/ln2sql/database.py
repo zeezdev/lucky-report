@@ -12,6 +12,8 @@ class Database:
         self.tables = []
         self.thesaurus_object = None
         self.database_helper = PgDatabaseHelper(database_connection_string)
+        self.foreign_key_cache = dict()
+        self.reverse_foreign_key_cache = dict()
 
     def set_thesaurus(self, thesaurus):
         self.thesaurus_object = thesaurus
@@ -90,8 +92,27 @@ class Database:
             if table.full_name == table_name:
                 return table.get_foreign_key_names()
 
+    def get_foreign_tables_of_table(self, table_name):
+        return self.foreign_key_cache.get(table_name)
+
+    def get_tables_referenced_by(self, table_name):
+        return self.reverse_foreign_key_cache.get(table_name)
+
     def add_table(self, table):
         self.tables.append(table)
+
+    def cache_foreign_key(self, table_name, foreign_table_name):
+        if self.foreign_key_cache.get(table_name) is None:
+            self.foreign_key_cache[table_name] = set()
+            self.foreign_key_cache[table_name].add(foreign_table_name)
+        else:
+            self.foreign_key_cache[table_name].add(foreign_table_name)
+
+        if self.reverse_foreign_key_cache.get(foreign_table_name) is None:
+            self.reverse_foreign_key_cache[foreign_table_name] = set()
+            self.reverse_foreign_key_cache[foreign_table_name].add(table_name)
+        else:
+            self.reverse_foreign_key_cache[foreign_table_name].add(table_name)
 
     @staticmethod
     def _generate_path(path):
@@ -127,6 +148,7 @@ class Database:
             table = self.get_table_by_name(full_table_name)
             if table is not None:
                 table.add_foreign_key(key['column_name'], full_foreign_table_name, key['foreign_column_name'])
+                self.cache_foreign_key(full_table_name, full_foreign_table_name)
 
     def predict_type(self, string):
         if 'int' in string.lower():
