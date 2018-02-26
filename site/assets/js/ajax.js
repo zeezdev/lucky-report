@@ -14,7 +14,7 @@ function sendAjaxRequest(reqType, url, data, done, always, fail, timeout) {
         alert('Error (' + status + '): ' + err + '\n' + jqXHR.responseText);
     };
     var _reqType = reqType || 'POST'
-    var _timeout = 60000;
+    var _timeout = 600000;
 
     if (typeof done !== 'undefined') _done = done;
     if (typeof always !== 'undefined') _always = always;
