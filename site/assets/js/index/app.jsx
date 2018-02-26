@@ -154,15 +154,25 @@ class IndexApp extends React.Component {
         }
 
         render() {
+            let header = "";
+            let additionalClassNames = "";
+            if (this.props.requestId != "") {
+                header = <h2 className="lr-logo">Lucky Report</h2>;
+                additionalClassNames = "landing-post";
+            } else {
+                header = <h1 className="lr-logo">Lucky Report</h1>;
+                additionalClassNames = "landing";
+            }
+
             return (
-                <div>
-                  <h1 className="lr-logo">Lucky Report</h1>
+                <div className={additionalClassNames}>
+                  {header}
                   <div className="row">
                     <div className="col-lg-12">
                         <div className="input-group" style={{margin: "16px 0px"}}>
                             <input
                                 type={"text"}
-                                style={{width:"100%"}}
+                                style={{width:"100"}}
                                 className="form-control"
                                 value={this.state.queryValue}
                                 onChange={this.handleQueryOnChange.bind(this)}

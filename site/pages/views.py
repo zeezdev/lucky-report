@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, jsonify
 import psycopg2
 
 pages_app = Blueprint('pages_app', __name__)
-from models import Request, Result, ReportTypeEnum, ForeignKey, Column, Table
+from models import (Request, Result, ReportTypeEnum, ReportTypeEnum2int, ForeignKey, Column, Table)
 from app import db, app
 from ln2sql import Ln2sql
 
@@ -16,7 +16,7 @@ def translate(user_request):
         database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
-        # stopwords_path=os.path.join(app.config['LANG_STORE_PATH'], "..", "stopwords", "english.txt"),
+        stopwords_path=os.path.join(app.config['LANG_STORE_PATH'], "..", "stopwords", "english.txt"),
     ).get_query(user_request)
     return ln2sql
 
@@ -162,6 +162,16 @@ def get_pg_connection_string(host, dbname, user, password):
     return "host=%s dbname=%s user=%s password=%s" % (host, dbname, user, password)
 
 
+def get_numeric_types(cur):
+    q = """
+    select oid, typname, typcategory from pg_type where typcategory in ('N')
+    """
+    cur.execute(q)
+    rows = cur.fetchall()
+    return [int(row[0]) for  row in rows]
+
+
+
 def execute_query(query):
     pg_conn = psycopg2.connect(
         get_pg_connection_string(
@@ -171,10 +181,16 @@ def execute_query(query):
             app.config['DBPASS']))
 
     cur = pg_conn.cursor()
+
+    numeric = get_numeric_types(cur)
+    print("numeric types oid: %s" % str(numeric))
+
     cur.execute(query)
     columns = [column[0] for column in cur.description]
+    all_numeric = all(column.type_code in numeric for column in cur.description[1:])
+
     rows = cur.fetchall()
-    return columns, rows
+    return columns, rows, all_numeric
 
 
 
@@ -186,12 +202,22 @@ def api_result_detail(result_id):
     try:
         result_obj = db.session.query(Result).filter_by(id=int(result_id)).first()
         result['result'] = result_obj.to_dict()
-        result['ok'] = 1
+        result['request_text'] = result_obj.request.request
+        result['request_id'] = result_obj.request.id
 
-        columns, rows = execute_query(result['result']['query'])
+        # execute query on working DB
+        columns, rows, all_numeric = execute_query(result['result']['query'])
+
         result['data'] = rows
         result['columns'] = columns
-        # TODO:execute query on working DB
+        if all_numeric and len(columns) == 2:
+            result['result']['report_type'] = ReportTypeEnum2int[ReportTypeEnum.chart]  # pie
+        elif all_numeric and len(columns) > 2:
+            result['result']['report_type'] = ReportTypeEnum2int[ReportTypeEnum.graph]
+        else:
+            result['result']['report_type'] = ReportTypeEnum2int[ReportTypeEnum.table]
+
+        result['ok'] = 1
     except Exception as ex:
         print("Error: %s" % str(ex))
         return jsonify({'ok': 0, 'error': "server error"})

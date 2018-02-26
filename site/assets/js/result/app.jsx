@@ -60,7 +60,9 @@ class GoogleLineChart extends BaseGoogleChart(React.Component) {
         }
 
         var data = google.visualization.arrayToDataTable(raw_data);
-        var options = { title: this.props.title };
+        var options = {
+            //title: this.props.title
+        };
 
         var chart = new google.visualization.LineChart(document.getElementById(this.props.graphName));
         chart.draw(data, options);
@@ -89,8 +91,9 @@ class GoogleTableChart extends BaseGoogleChart(React.Component) {
         var options = {
             showRowNumber: true, 
             width: '100%',
-            height: '100%',
-            title: this.props.title,
+            // height: '100%',
+            // title: this.props.title,
+            page: true
         };
 
         var table = new google.visualization.Table(document.getElementById(this.props.graphName));
@@ -108,7 +111,7 @@ class GooglePieChart extends BaseGoogleChart(React.Component) {
 
         var data = google.visualization.arrayToDataTable(raw_data);
         var options = {
-            title: this.props.title,
+            //title: this.props.title,
         };
 
         var chart = new google.visualization.PieChart(document.getElementById(this.props.graphName));
@@ -141,7 +144,9 @@ class ResultApp extends React.Component {
                     self.setState({
                         result: deserializeResult(response.result),
                         data: response.data,
-                        columns: response.columns
+                        columns: response.columns,
+                        request_text: response.request_text,
+                        request_id: response.request_id,
                     });
                 } else {
                     console.log(`failed request /api/results/${self.props.resultId}`);
@@ -197,15 +202,20 @@ class ResultApp extends React.Component {
 
             result = (
                 <div className="coll-lg-12">
-                    <h4 style={{color:"#666"}}>{this.state.result.query}</h4>
                     {report}
+                    <h4 style={{color:"#666"}}>{this.state.result.query}</h4>
                 </div>
             );
         }
 
+        //let link = "/?request_id=" + this.state.request_id.toString();
         return (
             <div>
-                <h2>Report Result</h2>
+                <h2>Result for:{" "}
+                    <a href="">
+                        {this.state.request_text}
+                    </a>
+                </h2>
                 <div className="row">
                     {result}
                 </div>

@@ -1,15 +1,40 @@
 body {
   padding-top: 50px;
 }
+
 .starter-template {
   padding: 40px 15px;
   text-align: center;
 }
-
 
 h1.lr-logo {
     text-align: center;
     font-style: normal;
     font-weight: bold;
     color: #4e76ea;
+    font-size: 52px;
+}
+
+h2.lr-logo {
+    text-align: left;
+    font-style: normal;
+    font-weight: bold;
+    color: #4e76ea;
+    font-size: 32px;
+}
+
+
+div.landing {
+	width: 600px;
+	height: 200px;
+	position: absolute;
+	top:-200px;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	margin: auto;
+}
+
+div.landing-post {
+	width: 600px;
 }
