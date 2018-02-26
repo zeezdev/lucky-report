@@ -87,6 +87,7 @@ def get_foreign_keys(pg_cur):
 def index_work_db(config, db):
     from models import Table, Column, ForeignKey
     import psycopg2
+    return
 
     if int(os.environ.get('RUN_MIGRATION', 0)) != 0:
         return  # FIXME: dirty hack for migration!
