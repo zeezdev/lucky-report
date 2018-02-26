@@ -9,7 +9,7 @@ class PgDatabaseHelper:
 
     def get_similar_tables(self, table_name, schema_name=None):
         schema_clause = "" if schema_name is None else " AND schema = {0:s}".format(schema_name)
-        query = """SELECT schema, name FROM {0:s}.tables WHERE name % '{1:s}{2:s}' 
+        query = """SELECT schema, name FROM {0:s}.tables WHERE (name % '{1:s}' OR name ILIKE '%{1:s}%'){2:s} 
         ORDER BY similarity(name, '{1:s}') DESC""".format(self._schema, table_name, schema_clause)
         rows = self._get_rows(query)
         return [{'schema': row[0], 'name': row[1]} for row in rows]
@@ -18,12 +18,12 @@ class PgDatabaseHelper:
         if (schema_name is None and table_name is not None) or (schema_name is not None and table_name is None):
             raise RuntimeError("Check schema and table")
         if table_name is None:
-            query = """SELECT name FROM {0:s}.columns WHERE name % '{1:s}' 
+            query = """SELECT name FROM {0:s}.columns WHERE (name % '{1:s}' OR c.name ILIKE '%{1:s}%') 
             ORDER BY similarity(name, '{1:s}') DESC""".format(
                 self._schema, column_name)
         else:
             query = """SELECT c.name FROM {0:s}.columns AS c JOIN {0:s}.tables AS t ON t.id = c.table_id
-             WHERE t.schema = '{1:s}' AND t.name = '{2:s}' AND c.name % '{3:s}' 
+             WHERE t.schema = '{1:s}' AND t.name = '{2:s}' AND (c.name % '{3:s}' OR c.name ILIKE '%{3:s}%')  
              ORDER BY similarity(c.name, '{3:s}') DESC""".format(self._schema, schema_name, table_name, column_name)
         rows = self._get_rows(query)
         return [row[0] for row in rows]
