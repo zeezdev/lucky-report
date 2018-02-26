@@ -810,8 +810,8 @@ class Parser:
         parser_data_sets = []
         for i in range(0, len(words)):
             select_phrase = words[:i]
-            from_phrase = words[i]
-            where_phrase = words[i:]
+            from_phrase = [words[i]]
+            where_phrase = words[i+1:]
             similar_tables = self.database_object.get_similar_tables(words[i])
             tables_of_from = set()
             columns_of_select = set()
