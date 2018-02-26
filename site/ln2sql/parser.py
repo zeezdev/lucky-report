@@ -827,16 +827,33 @@ class Parser:
                         if len(similar_columns) > 0:
                             column_of_where.add(similar_columns[0])
                     tables_of_from.add(table['schema'] + '.' + table['name'])
-            else:
-                pass  # find by where
-
-            if len(tables_of_from) > 0:
                 where_phrase = self.adjust_where_phrase(tables_of_from, from_phrase, where_phrase)
                 columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(where_phrase))
                 parser_data_sets.append({'select_phrase': select_phrase, 'columns_of_select': list(columns_of_select),
                                          'tables_of_from': list(tables_of_from), 'from_phrase': from_phrase,
                                          'where_values': columns_of_values_of_where,
                                          'columns_of_where': list(column_of_where), 'where_phrase': where_phrase})
+
+        tables_of_from = set()
+        all_similar_columns = {}
+        for i in range(0, len(words)):
+            similar_columns = self.database_object.get_full_similar_columns(words[i])
+            if len(similar_columns) > 0:
+                tables_of_from.update([item['schema'] + '.' + item['table_name'] for item in similar_columns])
+                all_similar_columns[i] = similar_columns[0]['column_name']
+
+        tables_of_from = list(tables_of_from)
+        for i, name in all_similar_columns.items():
+            select_phrase = words[:i]
+            columns_of_select = [name for (j, name) in all_similar_columns.items() if j < i]
+            where_phrase = words[i:]
+            columns_of_values_of_where = self.get_columns_of_values_of_where(' '.join(where_phrase))
+            columns_of_where = [name for (j, name) in all_similar_columns.items() if not j < i]
+            parser_data_sets.append({'select_phrase': select_phrase, 'columns_of_select': columns_of_select,
+                                     'tables_of_from': tables_of_from, 'from_phrase': None,
+                                     'where_values': columns_of_values_of_where,
+                                     'columns_of_where': columns_of_where, 'where_phrase': where_phrase})
+
         return parser_data_sets
 
     def get_queries(self, parser_data_set):
