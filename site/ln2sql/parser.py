@@ -471,7 +471,7 @@ class WhereParser(Thread):
 
         for table_of_from in self.tables_of_from:
             where_object = Where()
-            for i in range(0, len(column_offset)):
+            for i in range(0, min(len(column_offset), len(columns_of_where))):
                 current = column_offset[i]
 
                 if i == 0:
@@ -926,7 +926,11 @@ class Parser:
             raise ParsingException("No keyword found in sentence!")
 
         queries = []
+        unique_queries = set()
         for data_set in parser_data_sets:
-            queries += self.get_queries(data_set)
+            for query in self.get_queries(data_set):
+                if str(query) not in unique_queries:
+                    unique_queries.add(str(query))
+                    queries.append(query)
 
         return [query for query in queries if not query.get_corrupted()]
