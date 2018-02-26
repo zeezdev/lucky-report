@@ -28,6 +28,11 @@ class PgDatabaseHelper:
         rows = self._get_rows(query)
         return [row[0] for row in rows]
 
+    def get_full_similar_columns(self, column_name):
+        query = """SELECT t.schema, t.name, c.name FROM {0:s}.columns AS c JOIN {0:s}.tables AS t ON c.table_id = t.id
+         WHERE c.name % '{1:s}' ORDER BY similarity(c.name, '{1:s}') DESC""".format(self._schema, column_name)
+        return [{'schema': row[0], 'table_name': row[1], 'column_name': row[2]} for row in self._get_rows(query)]
+
     def get_tables(self):
         query = "SELECT schema, name FROM {0:s}.tables ORDER BY name ASC".format(self._schema)
         rows = self._get_rows(query)
