@@ -12,6 +12,7 @@ from .query import *
 MIN_WORD_SIMILARITY = 0.4
 MIN_COLUMN_NAME_SIMILARITY = 0.3
 MAX_JOIN_DEPTH = 4
+MAX_TABLES_PER_DATA_SET = 25
 
 class SelectParser(Thread):
     def __init__(self, columns_of_select, tables_of_from, phrase, count_keywords, sum_keywords, average_keywords,
@@ -821,7 +822,7 @@ class Parser:
             select_phrase = words[:i]
             from_phrase = [words[i]]
             where_phrase = words[i + 1:]
-            similar_tables = self.database_object.get_similar_tables(words[i])
+            similar_tables = self.database_object.get_similar_tables(words[i])[:MAX_TABLES_PER_DATA_SET]
             tables_of_from = set()
             columns_of_select = set()
             column_of_where = set()
@@ -848,7 +849,7 @@ class Parser:
         all_similar_columns = {}
         for i in range(0, len(words)):
             similar_columns = self.database_object.get_full_similar_columns(words[i])
-            if len(similar_columns) > 0:
+            if len(similar_columns) > 0 and len(tables_of_from) <= MAX_TABLES_PER_DATA_SET:
                 tables_of_from.update([item['schema'] + '.' + item['table_name'] for item in similar_columns])
                 all_similar_columns[i] = similar_columns[0]['column_name']
 
