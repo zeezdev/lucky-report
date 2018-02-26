@@ -11,7 +11,14 @@ var e = document.getElementById('result-id');
 var resultId = parseInt(e.dataset.id);
 
 
-ReactDOM.render(
-    <ResultApp />,
-    document.getElementById('result')
-);
+var drawResult = function() {
+	ReactDOM.render(
+	    <ResultApp
+	        resultId={resultId}
+	    />,
+	    document.getElementById('result')
+	);
+};
+
+google.charts.load('current', {packages: ['corechart', 'table']});
+google.charts.setOnLoadCallback(drawResult); // render after page loading

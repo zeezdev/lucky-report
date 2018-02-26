@@ -1,6 +1,8 @@
 import os
+import random
 from flask import Blueprint, render_template, request, jsonify
 # from flask_sqlalchemy_session import current_session
+import psycopg2
 
 pages_app = Blueprint('pages_app', __name__)
 from models import Request, Result, ReportTypeEnum, ForeignKey, Column, Table
@@ -14,7 +16,7 @@ def translate(user_request):
         database_connection_string=app.config['SQLALCHEMY_DATABASE_URI'],
         # json_output_path=args.json_output,
         # thesaurus_path=args.thesaurus,
-        # stopwords_path=args.stopwords,
+        # stopwords_path=os.path.join(app.config['LANG_STORE_PATH'], "..", "stopwords", "english.txt"),
     ).get_query(user_request)
     return ln2sql
 
@@ -26,8 +28,10 @@ def index():
     request_id = request.values.get('request_id')
     if request_id is not None:
         request_id = int(request_id)
+        request_obj = db.session.query(Request).filter_by(id=request_id).first()
         # TODO: find in DB
         context['request_id'] = request_id
+        context['request_text'] = request_obj.request
 
     # try:
     #     ses_key = session['value']
@@ -57,6 +61,10 @@ def result():
     }
     print("id=%s" % result_id)
     return render_template('pages/result.html', **context)
+
+
+def resolve_report_type(sql):
+    return random.choice(list(ReportTypeEnum))
 
 
 # API
@@ -95,31 +103,20 @@ def api_request():
     except Exception as ex:
         print("Translation failed: %s" % str(ex))
 
-    # for r in t:
-    if isinstance(t, str):
-        results.append(Result(request_obj.id,
-                              t,
-                              1.000, ReportTypeEnum.table))
-    else:
-        for r in t:
+    if t and isinstance(t, str):
+        t = t.strip().replace('\n', ' ').replace('[1m', '').replace('[0m', '').replace('OOV', "'OOV' OR 1 = 1")
+        t = t.split(';')
+
+    for r in t:
+        if r:
             results.append(Result(request_obj.id,
                                   r,
-                                  1.000, ReportTypeEnum.table))
+                                  1.000,
+                                  resolve_report_type(r)))
 
-
-    # results.append(Result(request_obj.id,
-    #                  "SELECT server_id, name, server_type FROM servers WHERE name LIKE 'a*'",
-    #                  1.000, ReportTypeEnum.table))
-    # results.append(Result(request_obj.id,
-    #                  "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type",
-    #                  0.900, ReportTypeEnum.chart))
-    # results.append(Result(request_obj.id,
-    #                  "SELECT server_id, node_id, node_name, server_type FROM servers s, nodes n WHERE s,server_id = n.server_id GROUP BY server_type ORDER BY s.server_name",
-    #                  0.540, ReportTypeEnum.graph))
     for r in results:
         db.session.add(r)
     db.session.commit()
-
 
     return jsonify(result)
 
@@ -161,6 +158,26 @@ def api_results():
     return js
 
 
+def get_pg_connection_string(host, dbname, user, password):
+    return "host=%s dbname=%s user=%s password=%s" % (host, dbname, user, password)
+
+
+def execute_query(query):
+    pg_conn = psycopg2.connect(
+        get_pg_connection_string(
+            app.config['DBHOST'],
+            app.config['DBNAME'],
+            app.config['DBUSER'],
+            app.config['DBPASS']))
+
+    cur = pg_conn.cursor()
+    cur.execute(query)
+    columns = [column[0] for column in cur.description]
+    rows = cur.fetchall()
+    return columns, rows
+
+
+
 @pages_app.route('/api/results/<result_id>')
 def api_result_detail(result_id):
     result = {
@@ -169,6 +186,12 @@ def api_result_detail(result_id):
     try:
         result_obj = db.session.query(Result).filter_by(id=int(result_id)).first()
         result['result'] = result_obj.to_dict()
+        result['ok'] = 1
+
+        columns, rows = execute_query(result['result']['query'])
+        result['data'] = rows
+        result['columns'] = columns
+        # TODO:execute query on working DB
     except Exception as ex:
         print("Error: %s" % str(ex))
         return jsonify({'ok': 0, 'error': "server error"})

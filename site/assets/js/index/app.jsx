@@ -26,17 +26,38 @@ class ResultItem extends React.Component {
         super(props);
         this.state = {
         }
+        this.reportType2ImgSource = this.reportType2ImgSource.bind(this);
+    }
+
+    reportType2ImgSource(reportType) {
+        return {
+            1: 'icons8-data-sheet-50.png',
+            2: 'icons8-combo-chart-50.png',
+            3: 'icons8-doughnut-chart-50.png'
+        }[reportType];
     }
 
     render() {
+        let imgSource = "/static/img/" + this.reportType2ImgSource(this.props.reportType);
         return (
             <div className="panel panel-default">
-                <div className="panel-body" data-id={this.props.resultId}>
+                <div className="panel-body" data-id={this.props.resultId} style={{padding:"8px 16px"}}>
                     <a
                         href={"/results/?id=" + this.props.resultId}
                         target="_blank"
                     >
-                    {this.props.displayResult}
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td width="100%">
+                                    {this.props.displayResult}
+                                </td>
+                                <td width="50px">
+                                    <img src={imgSource} />
+                                </td>
+                            </tr>
+                        </tbody>
+                        </table>
                     </a>
                 </div>
             </div>
@@ -71,12 +92,13 @@ class ResultsList extends React.Component {
 /**
 * props:
 *   requestId: null or <int>
+*   requestText: null or <str>
 */
 class IndexApp extends React.Component {
         constructor(props) {
             super(props);
             this.state = {
-                queryValue: "",
+                queryValue: props.requestText || "",
                 results: []
             }
             this.sendRequest.bind(this);
@@ -142,7 +164,7 @@ class IndexApp extends React.Component {
                                 type={"text"}
                                 style={{width:"100%"}}
                                 className="form-control"
-                                value={this.state.findWordValue}
+                                value={this.state.queryValue}
                                 onChange={this.handleQueryOnChange.bind(this)}
                                 onKeyPress={this.handleQueryOnKeyPress.bind(this)}
                                 placeholder={"Please enter your request"}
