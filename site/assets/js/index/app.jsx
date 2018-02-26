@@ -67,25 +67,36 @@ class ResultItem extends React.Component {
 
 
 class ResultsList extends React.Component {
+/*
     constructor(props) {
         super(props);
-    }
+    }*/
 
     render() {
-        return (
-            <div>
-                {
-                    this.props.results.map((obj, index) => {
-                        return <ResultItem
-                            key={index}
-                            resultId={obj.id}
-                            displayResult={obj.query}
-                            reportType={obj.reportType}
-                        />
-                    })
-                }
-            </div>
-        )
+        if (this.props.results.length == 0 && this.props.requestId != "") {
+            return (
+                <div className="no-results">
+                No results :-(
+                <br/>
+                Try to change your request.
+                </div>
+            )
+        } else {
+            return (
+                <div>
+                    {
+                        this.props.results.map((obj, index) => {
+                            return <ResultItem
+                                key={index}
+                                resultId={obj.id}
+                                displayResult={obj.query}
+                                reportType={obj.reportType}
+                            />
+                        })
+                    }
+                </div>
+            )
+        }
     }
 }
 

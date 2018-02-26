@@ -42,3 +42,9 @@ div.landing {
 div.landing-post {
 	width: 600px;
 }
+
+div.no-results {
+    color: #4e76ea;
+    font-size: 28px;
+    text-align: left;
+}
