@@ -77,7 +77,11 @@ class GoogleTableChart extends BaseGoogleChart(React.Component) {
         var rows = this.props.data.slice(); // copy
         for (let i = 0; i < rows.length; i++) {
             for (let j = 0; j < rows[i].length; j++) {
-                rows[i][j] = rows[i][j].toString();
+                if (rows[i][j] == null) {
+                    rows[i][j] = '';
+                } else {
+                    rows[i][j] = rows[i][j].toString();
+                }
             }
         }
         data.addRows(rows);
