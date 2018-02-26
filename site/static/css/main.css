@@ -23,6 +23,10 @@ h2.lr-logo {
     font-size: 32px;
 }
 
+.panel {
+    margin-bottom: 8px;
+}
+
 
 div.landing {
 	width: 600px;

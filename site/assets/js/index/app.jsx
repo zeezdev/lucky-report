@@ -158,9 +158,16 @@ class IndexApp extends React.Component {
             let additionalClassNames = "";
             if (this.props.requestId != "") {
                 header = <h2 className="lr-logo">Lucky Report</h2>;
-                additionalClassNames = "landing-post";
+                // additionalClassNames = "landing-post";
             } else {
-                header = <h1 className="lr-logo">Lucky Report</h1>;
+                header = (
+                    <div>
+                        <h1 className="lr-logo">
+                            Lucky Report
+                            <img src="/static/img/dice.png" style={{width:"92px", margin:"16px"}} />
+                        </h1>
+                    </div>
+                    );
                 additionalClassNames = "landing";
             }
 
@@ -168,7 +175,7 @@ class IndexApp extends React.Component {
                 <div className={additionalClassNames}>
                   {header}
                   <div className="row">
-                    <div className="col-lg-12">
+                    <div className="col-lg-12" style={{maxWidth:"600px"}}>
                         <div className="input-group" style={{margin: "16px 0px"}}>
                             <input
                                 type={"text"}

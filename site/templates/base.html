@@ -6,7 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="{% block head_description %}{% endblock %}">
   <meta name="author" content="{% block head_author %}{% endblock %}">
-  <link rel="icon" href="https://getbootstrap.com/docs/3.3/favicon.ico">
+
+  <link rel="icon" type="image/png" href="/static/img/favicon-32x32.png" sizes="32x32" />
+  <link rel="icon" type="image/png" href="/static/img/favicon-16x16.png" sizes="16x16" />
 
 
   <link href="{{ url_for('static', filename='bootstrap/dist/css/bootstrap.css') }}" rel="stylesheet">
@@ -168,12 +170,16 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="/">Lucky Report</a>
+
+          <a class="navbar-brand" href="/">
+            <img src="/static/img/dice.png" width="36" style="margin-right:8px; margin:-8px; float:left; padding:2px">
+            <span style="padding:16px">Lucky Report</span>
+          </a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav pull-right">
             <li class="pull-right">
-              <a href="{{ url_for('pages_app.about') }}">About</a>
+              <!--<a href="{{ url_for('pages_app.about') }}">About</a>-->
             </li>
           </ul>
         </div><!--/.nav-collapse -->

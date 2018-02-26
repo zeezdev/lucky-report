@@ -28,13 +28,16 @@ let BaseGoogleChart = (superclass) => class extends superclass{
     constructor(props) {
         super(props);
         this.drawCharts = this.drawCharts.bind(this);
+        this.state = {
+            height: "100%"
+        };
     }
 
     render() {
         return (
             <div 
                 id={this.props.graphName} 
-                style={{height: "600px", padding: "16px 0px"}} 
+                style={{height: this.state.height, padding: "16px 0px"}}
             />
         )
     }
@@ -52,6 +55,14 @@ let BaseGoogleChart = (superclass) => class extends superclass{
 }
 
 class GoogleLineChart extends BaseGoogleChart(React.Component) {
+    constructor(props) {
+        super(props);
+        // this.drawCharts = this.drawCharts.bind(this);
+        this.state = {
+            height: "600px"
+        };
+    }
+
     drawCharts(){
         var raw_data = [];
         raw_data.push(this.props.columns);
@@ -102,6 +113,14 @@ class GoogleTableChart extends BaseGoogleChart(React.Component) {
 }
 
 class GooglePieChart extends BaseGoogleChart(React.Component) {
+    constructor(props) {
+        super(props);
+        // this.drawCharts = this.drawCharts.bind(this);
+        this.state = {
+            height: "600px"
+        };
+    }
+
     drawCharts(){
         var raw_data = [];
         raw_data.push(this.props.columns);
