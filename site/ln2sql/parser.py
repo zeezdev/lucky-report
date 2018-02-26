@@ -169,7 +169,16 @@ class FromParser(Thread):
 
     def get_all_direct_linked_tables_of_a_table(self, table_src):
         links = []
-        for table_trg in self.database_dico:
+
+        linked_tables = set()
+        referenced_tables = self.database_object.get_foreign_tables_of_table(table_src)
+        referenced_by_tables = self.database_object.get_tables_referenced_by(table_src)
+        if referenced_tables is not None:
+            linked_tables = linked_tables.union(referenced_tables)
+        if referenced_by_tables is not None:
+            linked_tables = linked_tables.union(referenced_by_tables)
+
+        for table_trg in linked_tables:
             if table_trg != table_src:
                 link = self.is_direct_join_is_possible(table_src, table_trg)
                 if link is not None:
