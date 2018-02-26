@@ -39,6 +39,9 @@ class Database:
         # similar_columns += self.thesaurus_object.get_synonyms_of_a_word(column_name)  # TODO: synonims?
         return similar_columns
 
+    def get_full_similar_columns(self, column_name):
+        return self.database_helper.get_full_similar_columns(column_name)
+
     def get_max_word_similarity(self, word, text):  # TODO: some library to do this without DB
         return float(self.database_helper.get_max_word_similarity(word, text)[0])
 
