@@ -105,7 +105,7 @@ class SelectParser(Thread):
                         if keyword in phrase:
                             select_type.append('DISTINCT')
 
-                    if (i != len(select_phrases) - 1):
+                    if (i != len(select_phrases) - 1) and i < len(self.columns_of_select):
                         column = self.get_column_name_with_alias_table(self.columns_of_select[i], table_of_from)
                         self.select_object.add_column(column, self.uniquify(select_type))
 
@@ -488,11 +488,12 @@ class WhereParser(Thread):
                 column = self.get_column_name_with_alias_table(columns_of_where[i], table_of_from)
                 operation_type = self.predict_operation_type(previous, current)
 
-                if len(self.columns_of_values_of_where) > i:
-                    value = self.columns_of_values_of_where[
-                        len(self.columns_of_values_of_where) - len(columns_of_where) + i]
-                else:
-                    value = 'OOV'  # Out Of Vocabulary: default value
+                try:
+                    value_index = len(self.columns_of_values_of_where) - len(columns_of_where) + i
+                    value = self.columns_of_values_of_where[value_index]
+                except IndexError:
+                    # value = 'OOV'  # Out Of Vocabulary: default value
+                    continue
 
                 operator = self.predict_operator(current, _next)
                 where_object.add_condition(junction, Condition(column, operation_type, operator, value))
