@@ -107,11 +107,12 @@ def api_request():
         t = t.strip().replace('\n', ' ').replace('[1m', '').replace('[0m', '').replace('OOV', "'OOV' OR 1 = 1")
         t = t.split(';')
 
-    for r in t:
+    results_count = float(len(t))
+    for i, r in enumerate(t):
         if r:
             results.append(Result(request_obj.id,
                                   r,
-                                  1.000,
+                                  results_count - float(i),
                                   resolve_report_type(r)))
 
     for r in results:
@@ -191,7 +192,6 @@ def execute_query(query):
 
     rows = cur.fetchall()
     return columns, rows, all_numeric
-
 
 
 @pages_app.route('/api/results/<result_id>')
