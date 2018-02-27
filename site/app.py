@@ -1,4 +1,6 @@
 import os
+import flask.json
+import decimal
 from flask import Flask
 from flask.sessions import SessionInterface
 from beaker.middleware import SessionMiddleware
@@ -13,6 +15,15 @@ session_opts = {
     'session.url': '127.0.0.1:11211',
     'session.data_dir': './cache',
 }
+
+
+class MyJSONEncoder(flask.json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj, decimal.Decimal):
+            # Convert decimal instances to strings.
+            return str(obj)
+        return super(MyJSONEncoder, self).default(obj)
 
 
 class BeakerSessionInterface(SessionInterface):
@@ -85,9 +96,10 @@ def get_foreign_keys(pg_cur):
 
 
 def index_work_db(config, db):
+    return
+
     from models import Table, Column, ForeignKey
     import psycopg2
-    return
 
     if int(os.environ.get('RUN_MIGRATION', 0)) != 0:
         return  # FIXME: dirty hack for migration!
@@ -155,6 +167,7 @@ def index_work_db(config, db):
 
 
 app = Flask(__name__)
+app.json_encoder = MyJSONEncoder
 try:
     app_settings = os.environ['APP_SETTINGS']
 except KeyError:
