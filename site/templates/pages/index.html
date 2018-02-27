@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Welcome{% endblock %}
+{% block title %}{% if request_id %}{{ request_text }}{% else %}Welcome{% endif %}{% endblock %}
 
 {% block content %}
   <div id="index-id"></div>

@@ -8,6 +8,7 @@ pages_app = Blueprint('pages_app', __name__)
 from models import (Request, Result, ReportTypeEnum, ReportTypeEnum2int, ForeignKey, Column, Table)
 from app import db, app
 from ln2sql import Ln2sql
+from sqlalchemy import desc
 
 
 def translate(user_request):
@@ -183,7 +184,7 @@ def api_results():
         # request_obj = current_session.query(Request).filter_by(id=request_id).first()
         request_obj = db.session.query(Request).filter_by(id=request_id).first()
 
-        results = [r.to_dict() for r in request_obj.result]
+        results = list(reversed(sorted([r.to_dict() for r in request_obj.result], key=lambda x: x['rate'])))
         result.update({
             'request_id': request_id,
             'results': results,
@@ -238,6 +239,10 @@ def api_result_detail(result_id):
         if all_numeric and len(columns) == 2:
             result['result']['report_type'] = ReportTypeEnum2int[ReportTypeEnum.chart]  # pie
         elif all_numeric and len(columns) > 2:
+            for i, row in enumerate(result['data']):
+                result['data'][i] = list(row)
+                for j, v in enumerate(row[1:]):
+                    result['data'][i][j+1] = int(v)
             result['result']['report_type'] = ReportTypeEnum2int[ReportTypeEnum.graph]
         else:
             result['result']['report_type'] = ReportTypeEnum2int[ReportTypeEnum.table]

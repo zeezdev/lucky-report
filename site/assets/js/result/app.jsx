@@ -75,7 +75,7 @@ class GoogleLineChart extends BaseGoogleChart(React.Component) {
             //title: this.props.title
         };
 
-        var chart = new google.visualization.LineChart(document.getElementById(this.props.graphName));
+        var chart = new google.visualization.ColumnChart(document.getElementById(this.props.graphName));
         chart.draw(data, options);
     }
 }
@@ -104,7 +104,8 @@ class GoogleTableChart extends BaseGoogleChart(React.Component) {
             width: '100%',
             // height: '100%',
             // title: this.props.title,
-            page: true
+            page: true,
+            pageSize: 20,
         };
 
         var table = new google.visualization.Table(document.getElementById(this.props.graphName));
@@ -131,6 +132,8 @@ class GooglePieChart extends BaseGoogleChart(React.Component) {
         var data = google.visualization.arrayToDataTable(raw_data);
         var options = {
             //title: this.props.title,
+            pieHole: 0.4,
+            sliceVisibilityThreshold: 0.001
         };
 
         var chart = new google.visualization.PieChart(document.getElementById(this.props.graphName));
@@ -222,7 +225,7 @@ class ResultApp extends React.Component {
             result = (
                 <div className="coll-lg-12">
                     {report}
-                    <h4 style={{color:"#666"}}>{this.state.result.query}</h4>
+                    <h4 style={{color:"#666", textAlign:"center"}}>{this.state.result.query}</h4>
                 </div>
             );
         }
@@ -230,7 +233,7 @@ class ResultApp extends React.Component {
         //let link = "/?request_id=" + this.state.request_id.toString();
         return (
             <div>
-                <h2>Result for:{" "}
+                <h2>
                     <a href="">
                         {this.state.request_text}
                     </a>
