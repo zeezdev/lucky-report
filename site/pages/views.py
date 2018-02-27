@@ -63,8 +63,48 @@ def result():
     return render_template('pages/result.html', **context)
 
 
-def resolve_report_type(sql):
+def get_numeric_types(cur):
+    q = """
+    select oid, typname, typcategory from pg_type where typcategory in ('N')
+    """
+    cur.execute(q)
+    rows = cur.fetchall()
+    return [int(row[0]) for  row in rows]
+
+
+NUMERIC = None
+
+
+def execute_query(cur, query, limit=False):
+    global NUMERIC
+    if NUMERIC is None:
+        NUMERIC = get_numeric_types(cur)
+    print("numeric types oid: %s" % str(NUMERIC))
+
+    if limit:
+        query = "%s LIMIT 1" % query
+    cur.execute(query)
+    columns = [column[0] for column in cur.description]
+    all_numeric = all(column.type_code in NUMERIC for column in cur.description[1:])
+
+    rows = cur.fetchall()
+    return columns, rows, all_numeric
+
+
+def resolve_report_type_rnd(sql):
     return random.choice(list(ReportTypeEnum))
+
+
+def resolve_report_type(cur, query):
+    # execute query on working DB
+    columns, _, all_numeric = execute_query(cur, query, limit=True)
+
+    if all_numeric and len(columns) == 2:
+        return ReportTypeEnum.chart  # pie
+    elif all_numeric and len(columns) > 2:
+        return ReportTypeEnum.graph
+
+    return ReportTypeEnum.table
 
 
 # API
@@ -103,6 +143,14 @@ def api_request():
     except Exception as ex:
         print("Translation failed: %s" % str(ex))
 
+    pg_conn = psycopg2.connect(
+        get_pg_connection_string(
+            app.config['DBHOST'],
+            app.config['DBNAME'],
+            app.config['DBUSER'],
+            app.config['DBPASS']))
+    cur = pg_conn.cursor()
+
     if t and isinstance(t, str):
         t = t.strip().replace('\n', ' ').replace('[1m', '').replace('[0m', '').replace('OOV', "'OOV' OR 1 = 1")
         t = t.split(';')
@@ -113,7 +161,7 @@ def api_request():
             results.append(Result(request_obj.id,
                                   r,
                                   results_count - float(i),
-                                  resolve_report_type(r)))
+                                  resolve_report_type(cur, r)))
 
     for r in results:
         db.session.add(r)
@@ -163,37 +211,6 @@ def get_pg_connection_string(host, dbname, user, password):
     return "host=%s dbname=%s user=%s password=%s" % (host, dbname, user, password)
 
 
-def get_numeric_types(cur):
-    q = """
-    select oid, typname, typcategory from pg_type where typcategory in ('N')
-    """
-    cur.execute(q)
-    rows = cur.fetchall()
-    return [int(row[0]) for  row in rows]
-
-
-
-def execute_query(query):
-    pg_conn = psycopg2.connect(
-        get_pg_connection_string(
-            app.config['DBHOST'],
-            app.config['DBNAME'],
-            app.config['DBUSER'],
-            app.config['DBPASS']))
-
-    cur = pg_conn.cursor()
-
-    numeric = get_numeric_types(cur)
-    print("numeric types oid: %s" % str(numeric))
-
-    cur.execute(query)
-    columns = [column[0] for column in cur.description]
-    all_numeric = all(column.type_code in numeric for column in cur.description[1:])
-
-    rows = cur.fetchall()
-    return columns, rows, all_numeric
-
-
 @pages_app.route('/api/results/<result_id>')
 def api_result_detail(result_id):
     result = {
@@ -206,7 +223,15 @@ def api_result_detail(result_id):
         result['request_id'] = result_obj.request.id
 
         # execute query on working DB
-        columns, rows, all_numeric = execute_query(result['result']['query'])
+        pg_conn = psycopg2.connect(
+            get_pg_connection_string(
+                app.config['DBHOST'],
+                app.config['DBNAME'],
+                app.config['DBUSER'],
+                app.config['DBPASS']))
+
+        cur = pg_conn.cursor()
+        columns, rows, all_numeric = execute_query(cur, result['result']['query'])
 
         result['data'] = rows
         result['columns'] = columns
