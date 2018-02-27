@@ -1,5 +1,6 @@
 import React from 'react';
 var sendAjaxRequest = require('../ajax').sendAjaxRequest;
+import { ClimbingBoxLoader } from 'react-spinners';
 
 
 var deserializeResult = function(json) {
@@ -10,6 +11,26 @@ var deserializeResult = function(json) {
         rate: json.rate,
         reportType: json.report_type
     }
+}
+
+
+class AwesomeComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      loading: true
+    }
+  }
+  render() {
+    return (
+      <div className='sweet-loading'>
+        <ClimbingBoxLoader
+          color={'#f00'}
+          loading={this.state.loading}
+        />
+      </div>
+    )
+  }
 }
 
 
@@ -73,7 +94,7 @@ class ResultsList extends React.Component {
     }*/
 
     render() {
-        if (this.props.results.length == 0 && this.props.requestId != "") {
+        if (this.props.results.length == 0 && this.props.requestId) {
             return (
                 <div className="no-results">
                 No results :-(
@@ -110,14 +131,17 @@ class IndexApp extends React.Component {
             super(props);
             this.state = {
                 queryValue: props.requestText || "",
-                results: []
+                results: [],
+                loading: true
             }
-            this.sendRequest.bind(this);
+            this.sendRequest = this.sendRequest.bind(this);
+            this.resetFound = this.resetFound.bind(this);
         }
 
         componentDidMount() {
             if (this.props.requestId != "") {
                 var self = this;
+                this.setState({loading: true});
                 sendAjaxRequest('GET', '/api/results', {'request_id': this.props.requestId},
                     function(response, textStatus, jsXHR) {
                         if ('ok' in response && parseInt(response.ok) === 1) {
@@ -127,13 +151,15 @@ class IndexApp extends React.Component {
                             }
                             self.setState({results: results});
                         }
-                    }                    
+                    }, () => { self.setState({loading: false}); }
                 );
+            } else {
+                this.setState({loading: false});
             }
         }
 
         resetFound() {
-
+            this.setState({results: []});
         }
 
         handleQueryOnChange(e) {
@@ -142,6 +168,8 @@ class IndexApp extends React.Component {
 
         sendRequest(request) {
             this.resetFound();
+            this.setState({loading: true});
+            var self = this;
             sendAjaxRequest('GET', '/api/request', {'request': request},
                 function(response, textStatus, jsXHR) {
                     if ('ok' in response && parseInt(response.ok) === 1) {
@@ -182,6 +210,14 @@ class IndexApp extends React.Component {
                 additionalClassNames = "landing";
             }
 
+            if (this.state.loading) {
+                return (
+                    <div className="loading">
+                        <AwesomeComponent />
+                    </div>
+                )
+            }
+
             return (
                 <div className={additionalClassNames}>
                   {header}
@@ -207,7 +243,7 @@ class IndexApp extends React.Component {
                         </div>
                     </div>
                     <div className="col-lg-12">
-                        <ResultsList results={this.state.results}/>
+                        <ResultsList results={this.state.results} requestId={this.props.requestId}/>
                     </div>
                   </div>
                 </div>

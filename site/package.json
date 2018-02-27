@@ -22,7 +22,11 @@
     "popper.js": "^1.12.9",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
+    "react-spinners": "^0.2.6",
     "webpack": "^3.10.0",
     "webpack-bundle-tracker": "^0.2.1"
+  },
+  "dependencies": {
+    "react-spinners": "^0.2.6"
   }
 }

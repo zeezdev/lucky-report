@@ -48,3 +48,15 @@ div.no-results {
     font-size: 28px;
     text-align: left;
 }
+
+/* Absolute Center Spinner */
+div.loading {
+	width: 150px;
+	height: 150px;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	margin: auto;
+}
